@@ -153,3 +153,10 @@ AI Hub 공식 노면 폴리곤을 가져올 때는 배포본 설명서의 라벨
 `python3 scripts/prepare_surface_subset.py --source Surface_1.zip --output sidewalk_subset_350.zip --count 350`으로 폴더에 분산된 JPG·대응 PNG 350쌍과 관련 XML을 묶는다. 원본 ZIP 전체를 풀지 않으며 원본 마스크·XML 값을 보존한다. 실제 선별 용량, PNG 헤더, XML 클래스 이름(지원 형식인 경우), 파일 해시는 `subset_manifest.json`에 기록한다. `Surface_NNN`은 그룹 후보일 뿐 실제 장소·시퀀스 확인을 대신하지 않는다.
 
 생성한 ZIP을 `내 드라이브/Sidewalk-Segmentation-Benchmark/data/uploads/sidewalk_subset_350.zip`에 올리고 `SOURCE_IMAGES='/content/drive/MyDrive/Sidewalk-Segmentation-Benchmark/data/uploads/sidewalk_subset_350.zip'`로 지정한다. 마스크와 XML은 가져오기 캐시에 보존되며 실제 클래스 정의·색상/ID 매핑을 검증한 뒤 라벨 변환을 연결한다. 변환 확인 전 정식 학습은 실행하지 않는다.
+
+
+## Surface XML 실제 학습 ID 변환
+
+`src/surface_import.py`와 노트북 2번 구역의 `RUN_SURFACE_PREPARATION` 셀로 전체 ZIP 압축 해제 없이 350개 표본을 준비한다. XML 폴리곤 z_order를 보존하고 sidewalk→2, roadway의 normal→1, bike_lane→8로만 변환한다. alley, braille_guide_blocks, caution_zone, roadway crosswalk와 미표기는 255이다. RGB 색상은 추측하지 않는다. 원본 RGB PNG, XML, 원본 클래스 ID 마스크와 속성을 따로 보존한다. polyline/box 등 미지원 도형이 있는 이미지는 제외한다.
+
+지원 라벨이 있는 이미지에서 폴더별 round-robin으로 선별하므로 선택 편향이 있으며, 9종 전체 성능을 검증할 수 없다. 선택 정책과 클래스 픽셀 수는 `data/surface_preparation.json`에 저장한다. 검수 상태는 `needs_review`, group_id와 split은 미확정으로 둔다. `data/review/surface_review.csv`와 surface_overlays에서 검수한다. 공식 마스크는 자동으로 reviewed가 되지 않는다. 검수·장소 분할 없이 정식 학습하지 않는다. 중단 후 동일 설정으로 재실행하면 기존 파일 해시를 검사하고 이어간다.
