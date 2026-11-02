@@ -59,5 +59,12 @@
     "dataset_189_live_file_count": 54,
     "authenticated_download": "not_run_no_api_key",
     "surface_1_file_key": "49954"
+  },
+  "tailscale_proxy": {
+    "tests_total": 26,
+    "ci": "passed",
+    "colab_install_checksum_and_userspace_daemon": "passed",
+    "browser_login_url_generated": true,
+    "exit_node_egress_and_authenticated_download": "pending_user_login_and_exit_selection"
   }
 }
