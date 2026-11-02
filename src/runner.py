@@ -63,7 +63,7 @@ def report(root):
     (root/'reports/experiment_report.md').write_text('\n'.join(text),encoding='utf-8')
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['init','import','split','teachers','review-export','review-import','teacher-select','train','evaluate','student-features','baselines','benchmark','direction','report','smoke'])
+    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['init','import','split','teachers','review-export','review-import','teacher-select','train','evaluate','student-features','baselines','benchmark','direction','b2-direction','report','smoke'])
     parser.add_argument('--root',required=True);parser.add_argument('--source');parser.add_argument('--legacy',default=str(Path(__file__).resolve().parents[1]/'legacy'))
     parser.add_argument('--experiment',default='A');parser.add_argument('--models',nargs='+',default=['mask2former_swin_l','oneformer_dinat_l','mask2former_r50','segformer_b5','segformer_b2'])
     parser.add_argument('--confirm-groups',action='store_true');parser.add_argument('--confirm-reviewed',action='store_true');parser.add_argument('--reviewer',default='')
@@ -109,6 +109,10 @@ def main():
             else:
                 verified=legacy.verify_models(root,load_json(Path(args.legacy)/'model_registry.json'),args.models)
                 legacy.run_benchmark(root,manifest,verified,args.models,require_gpu=True)
+        elif args.command=='b2-direction':
+            from .b2_direction import run_b2_direction,infer_b2_direction
+            if args.source:infer_b2_direction(root,args.source,root/'outputs/b2_direction/new_image_candidate.jpg')
+            else:run_b2_direction(root,args.split)
         elif args.command=='direction':
             from .direction import feature_table,classify
             for key in args.models:
