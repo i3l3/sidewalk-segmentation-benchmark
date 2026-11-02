@@ -92,7 +92,7 @@
     "unit_tests": 35,
     "colab_synthetic_train_resume_evaluate": "passed",
     "resume_max_weight_difference": 7.450580596923828e-09,
-    "real_dataset_training": "not_executed_pending_review_and_split"
+    "real_dataset_training": "A and C completed; fixed-test evaluation completed"
   },
   "alley_road_migration": {
     "total_images": 350,
@@ -144,5 +144,49 @@
     "test_predictions_evaluated": false,
     "real_training_started": false,
     "unit_tests": 39
+  },
+  "reviewed_A_C_complete": {
+    "state": "completed",
+    "training_images": 251,
+    "validation_images": 39,
+    "fixed_test_images": 60,
+    "test_retuning": false,
+    "actual_location_independence_verified": false,
+    "experiments": [
+      {
+        "experiment": "A",
+        "model": "B0",
+        "epochs_completed": 20,
+        "best_epoch": 19,
+        "best_validation_miou": 0.7370055923834231,
+        "test_miou": 0.5773580287955415,
+        "test_pixel_accuracy": 0.8841801741990969,
+        "mean_boundary_f1": 0.009626517795547703,
+        "mean_inference_seconds": 0.027200240916666445,
+        "max_training_gpu_mib": 822.6650390625,
+        "model_parameters": 3714915,
+        "best_weights_sha256": "29b895bf16c2721302ff46dabd66507c897a82bfdd8fc6a67e9a768a7ce1723f"
+      },
+      {
+        "experiment": "C",
+        "model": "B2",
+        "epochs_completed": 14,
+        "best_epoch": 9,
+        "best_validation_miou": 0.8229860317693495,
+        "test_miou": 0.6266251500807655,
+        "test_pixel_accuracy": 0.8941906706821633,
+        "mean_boundary_f1": 0.0247343914482625,
+        "mean_inference_seconds": 0.08712008418335697,
+        "max_training_gpu_mib": 2578.82421875,
+        "model_parameters": 27348931,
+        "best_weights_sha256": "2422e38a0a893d862bb5f3acfaac5800db19fe0c829569cff169a900dfbdd248"
+      }
+    ],
+    "bike_lane_test_images": 7,
+    "scope_excluded": [
+      "B",
+      "D",
+      "five_baseline_models"
+    ]
   }
 }
