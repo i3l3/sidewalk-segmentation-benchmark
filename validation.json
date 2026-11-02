@@ -1,0 +1,56 @@
+{
+  "checked_at": "2026-11-02 Asia/Seoul",
+  "unit_tests": {
+    "passed": 15,
+    "failed": 0
+  },
+  "colab_synthetic_training_resume_evaluation": {
+    "status": "passed",
+    "synthetic_only": true,
+    "real_training": false,
+    "completed_epochs": 2,
+    "resume_max_weight_difference": 0.0,
+    "evaluation_generated": true,
+    "all_ignore_loss_finite": true,
+    "disconnected_direction_abstains": true,
+    "device": "cpu"
+  },
+  "colab_official_student_loading": {
+    "b0": {
+      "loaded": true,
+      "revision": "80983a413c30d36a39c20203974ae7807835e2b4",
+      "new_head": true,
+      "shape": [
+        1,
+        9,
+        16,
+        16
+      ],
+      "finite_loss": true
+    },
+    "b2": {
+      "loaded": true,
+      "revision": "3bb39e8739149c3777d0325349b2a6c32c6413db",
+      "new_head": true,
+      "shape": [
+        1,
+        9,
+        16,
+        16
+      ],
+      "finite_loss": true
+    }
+  },
+  "notebook_no_data_sequential_execution": "passed (14 code cells; Drive disabled)",
+  "not_performed": [
+    "AI Hub account download",
+    "human annotation review",
+    "real-data A/B/C/D fine-tuning",
+    "real-data quantitative comparison",
+    "human-labeled direction evaluation"
+  ],
+  "notes": [
+    "Synthetic tiny model results do not establish B0/B2 accuracy.",
+    "Actual AI Hub source JSON schema must be checked after data download; normalized polygon and ID PNG import are available."
+  ]
+}

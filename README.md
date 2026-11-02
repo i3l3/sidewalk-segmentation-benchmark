@@ -1,0 +1,118 @@
+# 보행 지원 시스템 2차 개발
+
+`notebooks/benchmark.ipynb`의 최상위 구역은 요청한 네 부분입니다. `notebooks/finetuning.ipynb`는 같은 내용을 담은 이름 별칭입니다.
+
+1. **기존 5개 모델 분할 코드**: 설치·GPU·Drive 설정, 기존 모델별 독립 프로세스 추론.
+2. **데이터셋 라벨링 코드**: 자료 가져오기, 장소/시퀀스 분할, Teacher 2종 초안, 외부 검수, Teacher 선택.
+3. **모델 학습 또는 파인튜닝 코드**: ImageNet 인코더에서 B0/B2 A~D 실험, best 저장, epoch 단위 재개.
+4. **성능 검증 코드**: 고정 테스트 평가, 오류·연석 확대, 그래프, 보행 영역, 방향 후보와 방향 분류기, 보고서.
+
+기존 모델 로더는 `legacy/`에서 재사용합니다. 1차 노트북과 사진 4장·20개 실험 결과는 이전 배포 자료에 보존되어 있으며, 이 공개 저장소에는 원본 사진·정답·가중치를 넣지 않았습니다.
+
+[Colab에서 열기](https://colab.research.google.com/github/i3l3/sidewalk-segmentation-benchmark/blob/main/notebooks/benchmark.ipynb)
+
+## GitHub 기반 실행
+
+노트북 첫 구역에서 이 저장소를 `/content/sidewalk-segmentation-benchmark`에 clone합니다.
+노트북에 인코딩한 코드 묶음을 넣지 않으며, `src/`와 `legacy/`의 코드를 직접 사용합니다.
+이미지·라벨·체크포인트·결과는 설정한 Google Drive `ROOT`에 저장합니다.
+
+- `REPO_REF='main'`: 현재 main 커밋을 가져옵니다.
+- 재현 실험: 출력된 SHA를 `REPO_REF`에 지정해 같은 코드로 실행합니다.
+- 실제 커밋은 `ROOT/metrics/source_revision.json`에 기록됩니다.
+- clone 폴더에 수정 사항이 있으면 덮어쓰지 않고 중단합니다. 수정본을 보존하거나 다른 `REPO_DIR`를 지정하세요.
+- 실행 결과·데이터·비밀값은 `.gitignore`로 저장소에서 제외합니다.
+
+로컬에서 기본 검사:
+
+```bash
+python -m pip install numpy scipy pandas Pillow scikit-learn matplotlib joblib nbformat
+python -m unittest discover -s tests -v
+python scripts/validate_notebooks.py
+```
+
+## 현재 완료 상태
+
+- 실제 학습용 이미지, 사람이 검수한 정답, 방향 정답은 아직 없습니다.
+- 데이터·분할·검수·학습·평가 코드를 구현했고, 합성 자료의 작은 모델로 저장·재개 흐름을 검증했습니다.
+- 합성 테스트 점수는 실제 B0/B2 또는 한국 보행 환경 성능이 아닙니다. 최종 모델이나 개선 정도를 아직 확정하지 않았습니다.
+- 공식 mit-b0/mit-b2 인코더와 새 9종 분할 헤드의 로딩·출력·유한 손실을 Colab에서 확인했습니다.
+
+## 실제 실험을 시작하는 순서
+
+1. Colab GPU를 선택하고 노트북의 설치·Drive 셀을 실행합니다.
+2. [AI Hub 인도보행 영상](https://www.aihub.or.kr/aihubdata/data/view.do?aihubDataSe=data&currMenu=1&dataSetSn=189&topMenu=)의 이용 조건을 확인하고 필요한 이미지 자료를 다운로드합니다. 인증은 사용자가 진행합니다.
+3. 폴더 또는 ZIP 경로를 `SOURCE_IMAGES`에 지정합니다. 기본 수집 상한은 중복 제외 350장입니다. 원본 경로와 그룹 힌트를 CSV에 남깁니다.
+4. `data/dataset_metadata.csv`에서 `group_id`를 촬영 장소·시퀀스 단위로 채웁니다. 연속 프레임은 같은 그룹이어야 합니다. `camera_view=pedestrian`은 확인한 사진에만 입력합니다.
+5. `CONFIRM_GROUPS=True`로 train/validation/test를 고정합니다. 목표는 250/50/50이며 그룹 보존 때문에 실제 수량은 달라질 수 있습니다. 이후 이미지를 추가하려면 새 데이터 버전 경로를 사용합니다.
+6. 두 Teacher의 초안을 생성하고 검수 ZIP을 내보냅니다. `draft_masks/`와 `overlays/`를 구분합니다.
+7. 외부 라벨링 도구에서 검증·테스트 전부와 학습 일부를 검수합니다. 예를 들어 train 50장 검수 + 나머지 200장 자동 라벨이면 A/C와 B/D를 비교할 수 있습니다. 이 숫자는 권장 초기 구성이며 실제 확보량을 기록해야 합니다.
+8. 수정한 **ID PNG만 있는 폴더**를 `REVIEWED_MASKS`로 지정하고, 검수자와 `CONFIRM_REVIEWED=True`를 입력합니다. 파일명은 `image_id.png`, 크기는 원본과 같아야 합니다.
+9. `SELECT_TEACHER=True`로 검수된 train/validation 자료에서만 Teacher를 선택합니다. test는 선택에 사용하지 않습니다.
+10. 실제 자료가 준비되면 `RUN_REAL_TRAINING=True`. A/C에는 검수 학습 라벨, B/D에는 그 라벨과 별도 이미지의 Teacher 초안이 필요합니다.
+11. validation으로 설정·best checkpoint를 선택한 뒤 `RUN_FINAL_EVALUATION=True`로 고정 테스트 평가를 실행합니다.
+12. 방향 정답을 원본을 보고 직접 입력한 다음 `RUN_DIRECTION=True`로 특징·방향 후보를 계산합니다.
+
+기존 4장 탐색 사진은 파일/픽셀 해시로 학습 자료에서 제외합니다. 비슷한 사진 검사는 64bit dHash 거리 4 이하를 같은 분할 그룹으로 묶습니다. 촬영 시퀀스 분리를 대체하는 검사는 아닙니다.
+
+## 라벨 정의와 외부 검수
+
+| 학습 ID | 클래스 | 기존 공통 ID |
+|---|---|---|
+| 0 | Other | 0 |
+| 1 | Road | 1 |
+| 2 | Sidewalk | 2 |
+| 3 | Curb | 3 |
+| 4 | Crosswalk (plain) | 4 |
+| 5 | Pedestrian Area | 7 |
+| 6 | Curb Cut | 8 |
+| 7 | Crosswalk Marking | 9 |
+| 8 | Bike Lane | 10 |
+| 255 | Ignore | 5, 6, 11, 65535 |
+
+점자블록·계단·주의구역은 이번 학습 체계에서 제외합니다. 빈 미라벨 영역을 Other로 채우지 않습니다. Curb Cut, Crosswalk Marking, Pedestrian Area를 다른 클래스로 합치지 않습니다.
+
+`src.labeling.import_mask`는 명시적인 RGB→ID 매핑을 제공했을 때만 색상 마스크를 변환합니다. 검수 후 이미지 또는 마스크가 바뀌면 검수 승인이 해제됩니다. 검수하지 않은 초안은 `pseudo`, 검수 완료는 `reviewed`, 제외 대상은 `rejected`입니다.
+
+AI Hub 공식 노면 폴리곤을 가져올 때는 배포본 설명서의 라벨·속성 체계를 확인해야 합니다. `import_aihub_polygons` 입력은 명시적인 다음 중간 형식입니다.
+
+```json
+{"polygons": [{"label": "공식 라벨과 속성의 명시적 조합", "points": [[10,20],[50,20],[50,60]]}]}
+```
+
+공식 배포본의 실제 JSON은 아직 확보하지 않았으므로 자동으로 스키마를 추측하지 않습니다. 해당 형식으로 정규화하고 `label_mapping`을 제공하거나, ID PNG를 가져오세요. 미확인 라벨은 ignore로 남습니다. 공식 라벨도 자동으로 수동 검수 완료로 표시하지 않습니다.
+
+## 학습과 재개
+
+- A/B: `nvidia/mit-b0`, C/D: `nvidia/mit-b2`. 처음 선택한 모델 리비전을 저장해 실험 간 같은 인코더를 사용합니다.
+- 학습 분할 헤드는 새로 초기화되며 과거 학습 B0가 아닙니다.
+- 기본 seed42 / 512×512 / AdamW lr6e-5 / weight_decay .01 / effective batch8 / max20epoch / patience5.
+- 이미지와 마스크에 같은 crop/flip을 적용하고, 이미지에만 밝기 증강을 적용합니다. 마스크 리사이즈는 nearest-neighbor입니다.
+- GPU 메모리에 따라 microbatch를 설정하고 gradient accumulation으로 유효 배치를 유지합니다. 메모리 부족 시 `microbatch=1`로 새 실행 설정을 지정하세요.
+- `latest.pt`에는 모델·optimizer·scheduler·AMP·RNG·완료 epoch를 저장합니다. `best/`에는 validation mIoU가 가장 높은 safetensors를 저장합니다.
+- 설정·분할·이미지/라벨 해시가 바뀌면 기존 체크포인트에서 재개하지 않습니다. 마지막 완료 epoch부터 재개하며 미완료 epoch는 다시 실행합니다.
+
+## 평가·보행 방향
+
+- 검증·테스트 정답은 전부 사람이 검수한 라벨이어야 합니다.
+- 미지원 클래스는 N/A. 공통 Other/Road/Sidewalk mIoU를 별도로 기록합니다. 지원 범위가 다른 전체 mIoU나 Pixel Accuracy만으로 순위를 정하지 않습니다.
+- Boundary F1의 허용 오차는 원본 2px입니다. GT ignore 인접 경계는 제외합니다.
+- 한국/비한국 보행자 그룹이 모두 있어야 2:1 보조 점수를 계산합니다. 같은 이미지는 두 그룹에 중복 집계하지 않습니다.
+- 보행 후보는 인도·보행자 구역이며 하단 중앙과 연결된 성분만 남깁니다. 면적·행별 폭·연속성·중심 편차는 모두 영상 상대값입니다.
+- 장애물 마스크가 별도로 없으면 obstacle_ratio는 결측입니다. 거리를 미터로 추정하지 않고 결과를 안전 경로라고 표현하지 않습니다.
+- 방향 정답은 `set_direction_label(..., reviewer='실제 검수자', confirmed=True)`로 직접 지정합니다.
+- 방향별 train20/validation5/test5 이상일 때만 Decision Tree·Random Forest를 학습합니다. 그렇지 않으면 규칙 Baseline만 제공합니다.
+- 각 분할 모델의 특징으로 분류기를 따로 학습·평가해 모델 사이 특징 분포가 섞이지 않게 합니다.
+
+## 주요 출력
+
+- `data/dataset_metadata.csv`, `data/splits/locked.json`, `data/class_schema.json`
+- `metrics/review_priority.csv`, `metrics/teacher_selection.json`
+- `checkpoints/A~D/{run.json,history.json,latest.pt,best/}`
+- `metrics/segmentation_metrics.csv`, 모델별 클래스 지표·공통 지표·국가 그룹 지표
+- `metrics/direction_features.csv`, 방향별 분류 지표·confusion matrix
+- `outputs/comparisons/`: 원본·정답·예측·오류와 연석 확대
+- `outputs/direction_predictions/`: 연결 마스크와 방향 후보 이미지
+- `reports/graphs/`, `reports/experiment_report.md`
+
+실제 자료가 없는 경우 결과표를 채우지 않습니다. `validation.json`은 소프트웨어 동작 검증 기록이고 모델 성능 결과가 아닙니다.

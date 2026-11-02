@@ -1,0 +1,267 @@
+{
+  "mask2former_swin_l": {
+    "model_id": "facebook/mask2former-swin-large-mapillary-vistas-panoptic",
+    "revision": "b9a3e9eb06a6477a741c98cf91cfca11e620e59d",
+    "kind": "mask2former",
+    "dataset": "Mapillary Vistas",
+    "license_note": "CC BY-NC 4.0 (upstream model zoo); HF card: other; noncommercial",
+    "verified_at": "2026-11-01",
+    "processor_export": {
+      "_max_size": 2048,
+      "do_normalize": true,
+      "do_rescale": true,
+      "do_resize": true,
+      "ignore_index": 65,
+      "image_mean": [
+        0.48500001430511475,
+        0.4560000002384186,
+        0.4059999883174896
+      ],
+      "image_processor_type": "Mask2FormerImageProcessor",
+      "image_std": [
+        0.2290000021457672,
+        0.2239999920129776,
+        0.22499999403953552
+      ],
+      "num_labels": 65,
+      "reduce_labels": false,
+      "resample": 2,
+      "rescale_factor": 0.00392156862745098,
+      "size": {
+        "height": 384,
+        "width": 384
+      },
+      "size_divisor": 32
+    }
+  },
+  "mask2former_swin_l_semantic": {
+    "model_id": "facebook/mask2former-swin-large-mapillary-vistas-semantic",
+    "revision": "4772b6bf101d91f2534c106dc524d906aeb3c68a",
+    "kind": "mask2former",
+    "dataset": "Mapillary Vistas",
+    "license_note": "CC BY-NC 4.0 (upstream model zoo); HF card: other; noncommercial",
+    "verified_at": "2026-11-01",
+    "processor_export": {
+      "_max_size": 2048,
+      "do_normalize": true,
+      "do_rescale": true,
+      "do_resize": true,
+      "ignore_index": 65,
+      "image_mean": [
+        0.48500001430511475,
+        0.4560000002384186,
+        0.4059999883174896
+      ],
+      "image_processor_type": "Mask2FormerImageProcessor",
+      "image_std": [
+        0.2290000021457672,
+        0.2239999920129776,
+        0.22499999403953552
+      ],
+      "num_labels": 65,
+      "reduce_labels": false,
+      "resample": 2,
+      "rescale_factor": 0.00392156862745098,
+      "size": {
+        "height": 384,
+        "width": 384
+      },
+      "size_divisor": 32
+    }
+  },
+  "segformer_b5": {
+    "model_id": "nvidia/segformer-b5-finetuned-cityscapes-1024-1024",
+    "revision": "2c6f153e4c23c229e2fa2b188eb250607e030cd8",
+    "kind": "segformer",
+    "dataset": "Cityscapes",
+    "license_note": "HF card: other; NVIDIA upstream research/noncommercial license; check repository license",
+    "verified_at": "2026-11-01",
+    "processor_export": {
+      "do_normalize": true,
+      "do_resize": true,
+      "feature_extractor_type": "SegformerFeatureExtractor",
+      "image_mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "image_std": [
+        0.229,
+        0.224,
+        0.225
+      ],
+      "reduce_labels": false,
+      "resample": 2,
+      "size": 1024
+    }
+  },
+  "segformer_b2": {
+    "model_id": "nvidia/segformer-b2-finetuned-cityscapes-1024-1024",
+    "revision": "d633b2072669ca68d8f8e309de9b52bfdbf6bf72",
+    "kind": "segformer",
+    "dataset": "Cityscapes",
+    "license_note": "HF card: other; NVIDIA upstream research/noncommercial license; check repository license",
+    "verified_at": "2026-11-01",
+    "processor_export": {
+      "do_normalize": true,
+      "do_resize": true,
+      "feature_extractor_type": "SegformerFeatureExtractor",
+      "image_mean": [
+        0.485,
+        0.456,
+        0.406
+      ],
+      "image_std": [
+        0.229,
+        0.224,
+        0.225
+      ],
+      "reduce_labels": false,
+      "resample": 2,
+      "size": 512
+    }
+  },
+  "oneformer_swin_l_cityscapes": {
+    "model_id": "shi-labs/oneformer_cityscapes_swin_large",
+    "revision": "8ed649db2cc1756b8bc36f0cad00b0812e333027",
+    "kind": "oneformer",
+    "dataset": "Cityscapes",
+    "license_note": "HF card: MIT; backbone/training data rights must also be checked",
+    "verified_at": "2026-11-01",
+    "processor_export": {
+      "_max_size": 2048,
+      "class_info_file": "cityscapes_panoptic.json",
+      "do_normalize": true,
+      "do_rescale": true,
+      "do_resize": true,
+      "ignore_index": 255,
+      "image_mean": [
+        0.48500001430511475,
+        0.4560000002384186,
+        0.4059999883174896
+      ],
+      "image_processor_type": "OneFormerImageProcessor",
+      "image_std": [
+        0.2290000021457672,
+        0.2239999920129776,
+        0.22499999403953552
+      ],
+      "metadata": {
+        "0": "road",
+        "1": "building",
+        "10": "sky",
+        "11": "person",
+        "12": "rider",
+        "13": "car",
+        "14": "truck",
+        "15": "bus",
+        "16": "train",
+        "17": "motorcycle",
+        "18": "bicycle",
+        "2": "sidewalk",
+        "3": "wall",
+        "4": "fence",
+        "5": "pole",
+        "6": "traffic light",
+        "7": "traffic sign",
+        "8": "vegetation",
+        "9": "terrain",
+        "class_names": [
+          "road",
+          "building",
+          "sidewalk",
+          "wall",
+          "fence",
+          "pole",
+          "traffic light",
+          "traffic sign",
+          "vegetation",
+          "terrain",
+          "sky",
+          "person",
+          "rider",
+          "car",
+          "truck",
+          "bus",
+          "train",
+          "motorcycle",
+          "bicycle"
+        ],
+        "thing_ids": [
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18
+        ]
+      },
+      "num_labels": 19,
+      "num_text": null,
+      "processor_class": "OneFormerProcessor",
+      "reduce_labels": false,
+      "repo_path": "shi-labs/oneformer_demo",
+      "resample": 2,
+      "rescale_factor": 0.00392156862745098,
+      "size": {
+        "longest_edge": 2048,
+        "shortest_edge": 1024
+      }
+    }
+  },
+  "mask2former_swin_t_cityscapes": {
+    "model_id": "facebook/mask2former-swin-tiny-cityscapes-semantic",
+    "revision": "01a04783d1e2981b13cf5aace8cd87774012de27",
+    "kind": "mask2former",
+    "dataset": "Cityscapes",
+    "license_note": "CC BY-NC 4.0 (upstream model zoo); HF card: other; noncommercial",
+    "verified_at": "2026-11-01",
+    "processor_export": {
+      "_max_size": 2048,
+      "do_normalize": true,
+      "do_rescale": true,
+      "do_resize": true,
+      "ignore_index": 255,
+      "image_mean": [
+        0.48500001430511475,
+        0.4560000002384186,
+        0.4059999883174896
+      ],
+      "image_processor_type": "Mask2FormerImageProcessor",
+      "image_std": [
+        0.2290000021457672,
+        0.2239999920129776,
+        0.22499999403953552
+      ],
+      "num_labels": 19,
+      "reduce_labels": false,
+      "resample": 2,
+      "rescale_factor": 0.00392156862745098,
+      "size": {
+        "height": 384,
+        "width": 384
+      },
+      "size_divisor": 32
+    }
+  },
+  "oneformer_dinat_l": {
+    "model_id": "SHI-Labs/OneFormer/oneformer_dinat_l-mapillary",
+    "revision": "4962ef6a96ffb76a76771bfa3e8b3587f209752b",
+    "kind": "original",
+    "original_key": "oneformer_dinat_l",
+    "dataset": "Mapillary Vistas",
+    "license_note": "OneFormer code MIT; pretrained backbone and Mapillary data conditions also apply.",
+    "verified_at": "2026-11-01"
+  },
+  "mask2former_r50": {
+    "model_id": "facebookresearch/Mask2Former/mask2former_r50-mapillary",
+    "revision": "9b0651c6c1d5b3af2e6da0589b719c514ec0d69a",
+    "kind": "original",
+    "original_key": "mask2former_r50",
+    "dataset": "Mapillary Vistas",
+    "license_note": "Upstream weights: CC BY-NC 4.0.",
+    "verified_at": "2026-11-01"
+  }
+}
