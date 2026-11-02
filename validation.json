@@ -66,5 +66,20 @@
     "colab_install_checksum_and_userspace_daemon": "passed",
     "browser_login_url_generated": true,
     "exit_node_egress_and_authenticated_download": "pending_user_login_and_exit_selection"
+  },
+  "surface_preparation": {
+    "tests_total": 32,
+    "real_uploaded_zip_prepared_images": 350,
+    "folder_hints": 130,
+    "additional_mib": 461.4,
+    "reviewed": 0,
+    "split_assigned": 0,
+    "supported_ids": [
+      1,
+      2,
+      8
+    ],
+    "formal_training": "not_executed",
+    "preview_inspected": true
   }
 }
