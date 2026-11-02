@@ -46,7 +46,9 @@ def report(root):
     histories=list((root/'checkpoints').glob('*/history.json'));evaluations=list((root/'metrics').glob('*/summary.csv'))
     text=['# 2차 실험 실행 기록','',f'생성 시각: {now()}',f'이미지: {len(data)}장',
           f'검수 완료 라벨: {sum(r["label_verified"]=="true" for r in data)}장',
-          f'학습 기록: {len(histories)}개, 평가 요약: {len(evaluations)}개','',
+          f'학습 기록: {len(histories)}개, 평가 요약: {len(evaluations)}개',
+          f'현재 학습 클래스: {[CLASSES[i] for i in active_class_ids(root)]}',
+          '저장 마스크는 canonical ID, 모델 출력 헤드는 현재 활성 클래스만 사용한다.','',
           '## 실험 구성','A/C: 검수 라벨만, B/D: 동일 검수 라벨 + 별도 자동 라벨. 데이터량 효과와 라벨 품질 효과를 구분한다.',
           'B0/B2는 ImageNet 인코더에서 시작하며 분할 헤드는 새로 초기화한다. 과거 학습한 B0의 성능이 아니다.',
           '기본 9종에는 점자블록·계단이 포함되지 않는다. 보행 방향은 영상 좌표의 후보이며 실제 거리나 안전 경로가 아니다.','',
@@ -114,7 +116,7 @@ def main():
                 if not features.empty:classify(root,features,key)
         elif args.command=='smoke':
             from .smoke import smoke
-            smoke(root)
+            smoke(root,class_ids=json.loads(args.config).get('class_ids'))
         elif args.command=='report':report(root)
     except Exception as exc:
         save_json(root/'logs'/f'{args.command}_{now().replace(":","-")}.json',{'error':str(exc),'traceback':traceback.format_exc()})

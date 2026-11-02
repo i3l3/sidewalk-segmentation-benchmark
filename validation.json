@@ -81,5 +81,17 @@
     ],
     "formal_training": "not_executed",
     "preview_inspected": true
+  },
+  "three_class_task": {
+    "canonical_ids": [
+      1,
+      2,
+      8
+    ],
+    "model_head_labels": 3,
+    "unit_tests": 35,
+    "colab_synthetic_train_resume_evaluate": "passed",
+    "resume_max_weight_difference": 7.450580596923828e-09,
+    "real_dataset_training": "not_executed_pending_review_and_split"
   }
 }
