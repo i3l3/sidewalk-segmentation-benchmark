@@ -139,3 +139,8 @@ AI Hub 공식 노면 폴리곤을 가져올 때는 배포본 설명서의 라벨
 `src/tailscale_proxy.py`는 공식 static 패키지의 SHA256을 확인한 뒤 `/content/sidewalk-tailscale`에서 userspace HTTP 프록시를 실행한다. 인증 상태는 RAM에만 유지하며 Drive나 저장소에 기록하지 않는다. AI Hub 모듈이 실행하는 curl과 도구 설치 요청에만 프록시를 전달한다. 전역 `HTTPS_PROXY`, 시스템 라우팅, Git/Hugging Face/Drive 경로는 바꾸지 않는다. `DISCONNECT_TAILSCALE=True`로 해제할 수 있다. 국내 IP 경유는 AI Hub 인증이나 이용 승인을 대신하지 않는다. 실제 인증된 exit-node 다운로드는 사용자의 로그인·노드 선택 후 별도로 검증한다.
 
 원본 AI Hub ZIP 기본 저장 위치는 `/content/aihub_downloads`로 변경했다. 런타임 삭제 시 사라지므로 선별 데이터는 Drive에 별도 보관한다.
+
+
+## 원본 데이터셋 저장 위치 선택
+
+다운로드 설정 셀의 `SAVE_DATASET_TO_DRIVE`로 원본 ZIP의 저장 위치를 선택한다. 기본값 `False`는 `/content/aihub_downloads`이며, `True`는 `/content/drive/MyDrive/Sidewalk-Segmentation-Benchmark/data/downloads/aihub_189`이다. Drive를 선택하면 필요한 경우 마운트한다. 이 변수는 학습 결과 저장 설정인 `USE_DRIVE`와 독립적이다. 설정 셀을 다시 실행한 뒤 다운로드를 시작한다. 진행 중인 다운로드나 기존 파일은 자동 이동하지 않는다.
