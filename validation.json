@@ -52,5 +52,12 @@
   "notes": [
     "Synthetic tiny model results do not establish B0/B2 accuracy.",
     "Actual AI Hub source JSON schema must be checked after data download; normalized polygon and ID PNG import are available."
-  ]
+  ],
+  "aihub_download": {
+    "tests_total": 21,
+    "official_shell_install_colab": "passed",
+    "dataset_189_live_file_count": 54,
+    "authenticated_download": "not_run_no_api_key",
+    "surface_1_file_key": "49954"
+  }
 }
