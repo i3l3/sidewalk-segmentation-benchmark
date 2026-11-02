@@ -188,5 +188,89 @@
       "D",
       "five_baseline_models"
     ]
+  },
+  "b2_direction": {
+    "tests_passed": 44,
+    "notebooks_validated": true,
+    "route": {
+      "model": "B2 C/best",
+      "checkpoint_sha256": "2422e38a0a893d862bb5f3acfaac5800db19fe0c829569cff169a900dfbdd248",
+      "images": 60,
+      "split": "test",
+      "candidate_counts": {
+        "Left": 44,
+        "Right": 7,
+        "Straight": 4,
+        "No clear path": 5
+      },
+      "route_latency_seconds": {
+        "mean": 0.0880494585499188,
+        "median": 0.09126780449969374,
+        "p95": 0.11347411724996162
+      },
+      "route_latency_scope": "cached full-resolution mask to candidate; excludes file IO and rendering",
+      "no_clear_path_fraction": 0.08333333333333333,
+      "verified_human_direction_labels": 0,
+      "direction_accuracy": null,
+      "direction_accuracy_reason": "No direction evaluation is reported; human direction labels and a separate protocol are required",
+      "decision_tree_random_forest_trained": false,
+      "classifier_reason": "Need >=20 train /5 validation /5 test human labels per direction",
+      "thresholds_tuned_on_test": false,
+      "curb_and_obstacle_detection": "not_available_in_three_class_model",
+      "rule_path": "/content/drive/MyDrive/Sidewalk-Segmentation-Benchmark/data/splits/b2_route_rule_v1.json",
+      "output_directory": "/content/drive/MyDrive/Sidewalk-Segmentation-Benchmark/outputs/b2_direction",
+      "units": "normalized image coordinates",
+      "preview": "/content/drive/MyDrive/Sidewalk-Segmentation-Benchmark/reports/B2_direction_examples.jpg"
+    },
+    "fresh_inference_measurement": {
+      "images": 60,
+      "split": "test",
+      "device": "cuda",
+      "hardware": "Tesla T4",
+      "torch": "2.11.0+cu130",
+      "precision": "FP32",
+      "batch_size": 1,
+      "input_size": 512,
+      "warmup_images": 1,
+      "model_load_seconds": 0.4852271319996362,
+      "timing_scope": "RGB image in memory through resize, model, original-resolution mask and route; excludes disk IO, model loading and rendering",
+      "latency_seconds": {
+        "preprocess": {
+          "mean": 0.019618878583317685,
+          "median": 0.018960375000006024,
+          "p95": 0.023752991499986807
+        },
+        "inference_and_mask": {
+          "mean": 0.10028984463336504,
+          "median": 0.0994205895003688,
+          "p95": 0.10507938029973046
+        },
+        "route": {
+          "mean": 0.08843893373336868,
+          "median": 0.09200579050002489,
+          "p95": 0.11466150284963987
+        },
+        "pipeline": {
+          "mean": 0.20834765695005142,
+          "median": 0.2127145604999896,
+          "p95": 0.23385803259989188
+        }
+      },
+      "candidate_counts": {
+        "Left": 44,
+        "Right": 7,
+        "Straight": 4,
+        "No clear path": 5
+      },
+      "no_clear_path_fraction": 0.08333333333333333,
+      "paths_verified_inside_prediction": 55,
+      "paths_checked": 55,
+      "minimum_cached_mask_agreement": 1.0,
+      "peak_cuda_allocated_mib": 557.9638671875,
+      "direction_accuracy": null,
+      "thresholds_tuned_on_test": false,
+      "checkpoint_sha256": "2422e38a0a893d862bb5f3acfaac5800db19fe0c829569cff169a900dfbdd248"
+    },
+    "limitation": "44/60 Left candidates; no human direction ground truth; no tuning on test"
   }
 }
