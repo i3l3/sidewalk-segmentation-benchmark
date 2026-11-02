@@ -93,5 +93,18 @@
     "colab_synthetic_train_resume_evaluate": "passed",
     "resume_max_weight_difference": 7.450580596923828e-09,
     "real_dataset_training": "not_executed_pending_review_and_split"
+  },
+  "alley_road_migration": {
+    "total_images": 350,
+    "changed_images": 105,
+    "reported_road_cases": 21,
+    "reported_road_cases_with_road_label": 21,
+    "road_label_images_after": 263,
+    "sand_repair_mask_unchanged": true,
+    "new_approvals": 0,
+    "preview": "/content/drive/MyDrive/Sidewalk-Segmentation-Benchmark/reports/alley_mapping_before_after.jpg",
+    "unit_tests": 38,
+    "rule": "roadway normal + alley normal/speed_bump/damaged; crosswalk and caution excluded",
+    "model_training": "not_run"
   }
 }
