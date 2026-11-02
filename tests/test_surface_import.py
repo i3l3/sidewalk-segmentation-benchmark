@@ -18,8 +18,45 @@ class SurfaceTests(unittest.TestCase):
         train,_=rasterize(element,{'roadway':0});self.assertTrue((train==255).all())
         element[0][0].text='normal';train,_=rasterize(element,{'roadway':0});self.assertTrue((train==1).all())
 
+    def test_alley_road_mapping_excludes_crosswalk_and_unknown(self):
+        from src.surface_import import train_id
+        for attr in ['normal','speed_bump','damaged']:
+            element=ET.fromstring(f'<polygon label="alley"><attribute name="attribute">{attr}</attribute></polygon>')
+            self.assertEqual(train_id(element),1)
+        for attr in ['crosswalk','unknown']:
+            element=ET.fromstring(f'<polygon label="alley"><attribute name="attribute">{attr}</attribute></polygon>')
+            self.assertEqual(train_id(element),255)
+
+    def test_migration_needs_explicit_confirmation(self):
+        from src.surface_import import include_alley_as_road
+        with self.assertRaises(ValueError):include_alley_as_road('.',confirmed=False)
+
     def test_unsupported_shape_refuses_partial_mask(self):
         with self.assertRaises(ValueError):rasterize(ET.fromstring('<image width="4" height="4"><polyline label="sidewalk" points="0,0;1,1"/></image>'),{'sidewalk':0})
+
+    def test_alley_migration_audits_hashes_and_preserves_unreviewed_state(self):
+        from src.schema import configure_task,sha
+        from src.dataset import write_rows
+        from src.surface_import import include_alley_as_road
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp)/'project';configure_task(root,[1,2,8]);source=Path(temp)/'surface.zip'
+            image=io.BytesIO();Image.fromarray(np.full((12,12,3),80,np.uint8)).save(image,format='JPEG')
+            mask=io.BytesIO();Image.fromarray(np.zeros((12,12,3),np.uint8)).save(mask,format='PNG')
+            xml='<annotations><meta><task><labels><label><name>sidewalk</name></label><label><name>alley</name></label></labels></task></meta><image name="a.jpg" width="12" height="12"><polygon label="sidewalk" points="0,0;5,0;5,11;0,11"/><polygon label="alley" points="6,0;11,0;11,11;6,11"><attribute name="attribute">normal</attribute></polygon></image></annotations>'
+            with zipfile.ZipFile(source,'w') as archive:
+                archive.writestr('Surface_001/a.jpg',image.getvalue());archive.writestr('Surface_001/MASK/a.png',mask.getvalue());archive.writestr('Surface_001/labels.xml',xml)
+            prepare_surface(root,source,count=1)
+            data=rows(root);path=root/data[0]['mask_path'];old=np.asarray(Image.open(path)).copy();old[old==1]=255;Image.fromarray(old).save(path)
+            data[0]['mask_sha']=sha(path);write_rows(root,data)
+            audit=include_alley_as_road(root,confirmed=True)
+            self.assertEqual(audit['updated_images'],1)
+            self.assertTrue((np.asarray(Image.open(path))[:,6:]==1).all())
+            self.assertEqual(rows(root)[0]['label_verified'],'false')
+            self.assertEqual(rows(root)[0]['status'],'needs_review')
+            self.assertEqual(rows(root)[0]['mask_sha'],sha(path))
+            again=include_alley_as_road(root,confirmed=True)
+            self.assertEqual(again['last_run_changed_images'],0)
+            self.assertEqual(again['updated_images'],1)
 
     def test_prepare_resume_preserves_review_and_native(self):
         with tempfile.TemporaryDirectory() as temp:

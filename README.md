@@ -157,7 +157,7 @@ AI Hub 공식 노면 폴리곤을 가져올 때는 배포본 설명서의 라벨
 
 ## Surface XML 실제 학습 ID 변환
 
-`src/surface_import.py`와 노트북 2번 구역의 `RUN_SURFACE_PREPARATION` 셀로 전체 ZIP 압축 해제 없이 350개 표본을 준비한다. XML 폴리곤 z_order를 보존하고 sidewalk→2, roadway의 normal→1, bike_lane→8로만 변환한다. alley, braille_guide_blocks, caution_zone, roadway crosswalk와 미표기는 255이다. RGB 색상은 추측하지 않는다. 원본 RGB PNG, XML, 원본 클래스 ID 마스크와 속성을 따로 보존한다. polyline/box 등 미지원 도형이 있는 이미지는 제외한다.
+`src/surface_import.py`와 노트북 2번 구역의 `RUN_SURFACE_PREPARATION` 셀로 전체 ZIP 압축 해제 없이 350개 표본을 준비한다. XML 폴리곤 z_order를 보존하고 sidewalk→2, roadway normal 및 alley normal/speed_bump/damaged→1, bike_lane→8로 변환한다. braille_guide_blocks, caution_zone, roadway/alley crosswalk와 미표기는 255이다. RGB 색상은 추측하지 않는다. 원본 RGB PNG, XML, 원본 클래스 ID 마스크와 속성을 따로 보존한다. polyline/box 등 미지원 도형이 있는 이미지는 제외한다.
 
 지원 라벨이 있는 이미지에서 폴더별 round-robin으로 선별하므로 선택 편향이 있으며, 9종 전체 성능을 검증할 수 없다. 선택 정책과 클래스 픽셀 수는 `data/surface_preparation.json`에 저장한다. 검수 상태는 `needs_review`, group_id와 split은 미확정으로 둔다. `data/review/surface_review.csv`와 surface_overlays에서 검수한다. 공식 마스크는 자동으로 reviewed가 되지 않는다. 검수·장소 분할 없이 정식 학습하지 않는다. 중단 후 동일 설정으로 재실행하면 기존 파일 해시를 검사하고 이어간다.
 
@@ -165,3 +165,8 @@ AI Hub 공식 노면 폴리곤을 가져올 때는 배포본 설명서의 라벨
 ## 현재 실험은 3종
 
 현재 노트북은 `configure_task(ROOT, [1,2,8])`로 차도·인도·자전거도로를 선택한다. 모델 출력 헤드는 실제 3개이며 내부 학습 ID는 0=차도, 1=인도, 2=자전거도로다. 원본/저장/평가 마스크의 canonical ID는 1/2/8을 유지한다. 학습에서만 연속 ID로 변환하고 추론 결과는 canonical ID로 복원하므로 기존 방향 특징 코드도 유지된다. 활성 클래스 밖의 라벨은 손실과 정량 평가에서 ignore로 처리하며 9종 성능으로 보고하지 않는다. 설정과 클래스 매핑은 체크포인트 서명에 포함한다. 분할 고정 또는 학습 이후에는 task 변경을 차단한다. 9종으로 확장할 때는 원본에서 라벨을 추가하고 새 데이터 버전·새 출력 헤드/체크포인트를 만든다. 3종 체크포인트의 출력 의미를 9종으로 재해석하지 않는다.
+
+
+## 사용자 검수에 따른 3종 차도 정의 확장
+
+사용자가 골목(alley)도 차도에 포함하도록 확인했다. 현재 3종 정의에서는 alley의 normal/speed_bump/damaged를 차도 ID 1로 변환한다. 횡단보도 속성, 점자블록, 공사·주의 영역은 계속 ignore다. 기존 350장은 `include_alley_as_road(root, confirmed=True)`로 변경 내역과 이전/이후 해시를 기록하며 변환한다. 분할 고정·학습 이후나 사람이 검수 완료한 마스크에는 적용하지 않는다. 이 변경은 라벨 변환 규칙 수정이며 학습된 모델 성능 향상이 아니다. 사용자 제보는 검수 의견으로 남기고 재검수 전 approved로 표시하지 않는다.

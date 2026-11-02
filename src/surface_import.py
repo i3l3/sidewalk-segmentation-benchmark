@@ -10,18 +10,18 @@ import zipfile
 import xml.etree.ElementTree as ET
 import numpy as np
 from PIL import Image, ImageDraw
-from .schema import init, sha, load_json, save_json, CLASSES, COLORS
+from .schema import init, sha, load_json, save_json, CLASSES, COLORS, active_class_ids
 from .dataset import rows, write_rows, FIELDS
 
-MAPPING = {'sidewalk': 2, 'roadway:normal': 1, 'bike_lane': 8}
-EXCLUDED = ['alley', 'braille_guide_blocks', 'caution_zone', 'roadway:crosswalk', 'unannotated']
+MAPPING = {'sidewalk': 2, 'roadway:normal': 1, 'alley:normal': 1, 'alley:speed_bump': 1, 'alley:damaged': 1, 'bike_lane': 8}
+EXCLUDED = ['alley:crosswalk', 'braille_guide_blocks', 'caution_zone', 'roadway:crosswalk', 'unannotated']
 
 
 def train_id(shape):
     label = shape.attrib.get('label', '')
     attrs = {a.attrib.get('name'): (a.text or '').strip() for a in shape.findall('attribute')}
-    if label == 'roadway':
-        return 1 if attrs.get('attribute') == 'normal' else 255
+    if label in ('roadway','alley'):
+        return MAPPING.get(label+':'+attrs.get('attribute',''),255)
     return MAPPING.get(label, 255)
 
 
@@ -258,3 +258,54 @@ def refresh_review_overlays(root):
             'road_example_paths':[row['original_path'] for _,row in examples]}
     save_json(root/'reports/surface_visualization.json',result)
     return result
+
+
+def include_alley_as_road(root,confirmed=False):
+    """Explicit, audited migration of unreviewed XML labels before split/training."""
+    if not confirmed:raise ValueError('Explicit confirmation of the broader Road definition is required')
+    root=Path(root)
+    if active_class_ids(root)!=[1,2,8]:raise ValueError('Alley merge is only defined for the current three-class task')
+    if (root/'data/splits/locked.json').exists() or any((root/'checkpoints').glob('*/run.json')):
+        raise ValueError('Create a new dataset version after splitting or training')
+    data=rows(root)
+    if any(r['label_verified']=='true' or r['label_source']!='AI Hub Surface XML (official, unreviewed)' for r in data):
+        raise ValueError('Migration is limited to original, unreviewed Surface XML masks')
+    map_path=root/'data/surface_class_mapping.json';old=load_json(map_path)
+    native_ids=old['native_ids']
+    audit_path=root/'reports/alley_road_migration.json'
+    audit=load_json(audit_path) if audit_path.exists() else {'previous_mapping':old,'status':'in_progress','changes':{},'user_confirmed':True}
+    save_json(audit_path,audit)
+    changed=0
+    for index,row in enumerate(data):
+        image_id=row['image_id'];mask_path=root/row['mask_path']
+        if sha(mask_path)!=row['mask_sha']:raise ValueError('Source mask changed outside migration: '+image_id)
+        payload=load_json(root/'data/source_annotations'/(image_id+'.json'))
+        element=ET.Element('image',payload['image_attributes'])
+        for source_shape in payload['shapes']:
+            shape=ET.SubElement(element,source_shape['type'],source_shape['attributes'])
+            for name,value in source_shape['properties'].items():ET.SubElement(shape,'attribute',{'name':name}).text=value
+        mask,_=rasterize(element,native_ids)
+        before=np.asarray(Image.open(mask_path));pixels=int((before!=mask).sum())
+        if pixels:
+            previous_sha=row['mask_sha']
+            temp=mask_path.with_suffix('.tmp');Image.fromarray(mask).save(temp,format='PNG');temp.replace(mask_path)
+            row['mask_sha']=sha(mask_path)
+            values,counts=np.unique(mask[mask!=255],return_counts=True)
+            row['dominant_class']=CLASSES[int(values[counts.argmax()])]
+            row['status']='needs_review';row['label_verified']='false';row['reviewer']='';row['reviewed_at']=''
+            audit['changes'][image_id]={'before_sha':previous_sha,'after_sha':row['mask_sha'],'changed_pixels':pixels}
+            write_rows(root,data);save_json(audit_path,audit);changed+=1
+        if (index+1)%50==0:print('Alley-to-Road labels updated:',index+1,flush=True)
+    summary=load_json(root/'data/surface_preparation.json')
+    summary['config']['mapping']=MAPPING;summary['config']['excluded']=EXCLUDED
+    pixel_counts=Counter()
+    for row in data:
+        values,counts=np.unique(np.asarray(Image.open(root/row['mask_path'])),return_counts=True)
+        pixel_counts.update({str(int(v)):int(c) for v,c in zip(values,counts)})
+    summary['pixel_counts']=dict(pixel_counts)
+    summary['road_definition']='General roadway plus alley normal/speed_bump/damaged; crosswalk and caution zones excluded'
+    save_json(root/'data/surface_preparation.json',summary)
+    save_json(map_path,{'mapping':MAPPING,'excluded':EXCLUDED,'native_ids':native_ids,'background':255,'reviewed':False,'classes':CLASSES,'road_definition':summary['road_definition']})
+    audit.update(status='completed',updated_images=len(audit['changes']),last_run_changed_images=changed,reviewed=False,pixel_counts=dict(pixel_counts))
+    save_json(audit_path,audit)
+    return audit
