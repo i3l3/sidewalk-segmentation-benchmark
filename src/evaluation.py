@@ -70,13 +70,14 @@ def visualize(root,row,pred,model):
 
 def evaluate_predictions(root,model,prediction_dir,support=range(9),split='test',run_info=None):
     root=Path(root);data=validate_frozen(root)
+    support=sorted(set(support)&set(active_class_ids(root)))
     selected=[r for r in data if r['split']==split]
     if not selected or any(r['label_verified']!='true' for r in selected):
         raise ValueError(f'All {split} images require human-reviewed labels before evaluation')
     groups={};records=[];classes=[]
     for row in selected:
         pred=read_mask(Path(prediction_dir)/f'{row["image_id"]}.png')
-        gt=read_mask(root/row['mask_path'],pred.shape);cm=confusion(gt,pred);m=metrics(cm,support)
+        gt=restrict_task_mask(read_mask(root/row['mask_path'],pred.shape),active_class_ids(root));cm=confusion(gt,pred);m=metrics(cm,support)
         if not cm.sum():raise ValueError('No valid evaluation pixels')
         b=[boundary_counts(gt,pred,c) for c in range(9)]
         average=[boundary_f1(b[c]) for c in support]
@@ -99,7 +100,7 @@ def evaluate_predictions(root,model,prediction_dir,support=range(9),split='test'
         visualize(root,row,pred,model)
     summaries=[]
     for group,values in groups.items():
-        m=metrics(values['cm'],support);common=metrics(values['cm'],[0,1,2])
+        m=metrics(values['cm'],support);common=metrics(values['cm'],sorted(set([0,1,2])&set(active_class_ids(root))))
         summaries.append({'model':model,'group':group,'n':values['n'],'miou':m['miou'],
                           'common_other_road_sidewalk_miou':common['miou'],'pixel_accuracy':m['pixel_accuracy']})
         for c in m['per_class']:c['boundary_f1']=boundary_f1(values['b'][c['class_id']]) if c['supported'] else None

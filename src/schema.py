@@ -51,3 +51,43 @@ def init(root):
         'legacy_to_train':LEGACY_TO_TRAIN,'excluded_legacy_ids':[5,6,11],
         'notes':'Tactile paving / stairs / caution zone excluded from phase 2 ontology; not Other.'})
     return root
+
+
+# Storage masks keep canonical 9-class IDs so expanding the task never reinterprets files.
+def active_class_ids(root):
+    path=Path(root)/'data/active_task.json'
+    ids=load_json(path)['canonical_ids'] if path.exists() else list(range(9))
+    if not ids or len(set(ids))!=len(ids) or any(type(i) is not int or i not in range(9) for i in ids):
+        raise ValueError('Invalid active canonical class IDs')
+    return ids
+
+
+def configure_task(root,ids):
+    root=init(root);ids=list(ids)
+    if ids not in ([1,2,8],list(range(9))):raise ValueError('Supported tasks: canonical [1,2,8] or all nine classes')
+    path=root/'data/active_task.json'
+    previous=active_class_ids(root)
+    if previous!=ids and ((root/'data/splits/locked.json').exists() or any((root/'checkpoints').glob('*/run.json'))):
+        raise ValueError('Task cannot change after split lock or training; create a new dataset version')
+    save_json(path,{'canonical_ids':ids,'head_ids':{str(i):j for j,i in enumerate(ids)},
+                   'head_names':[CLASSES[i] for i in ids],'ignore':255,
+                   'note':'Stored masks remain canonical IDs; model head IDs are contiguous. New head/checkpoint required when expanding.'})
+    return active_class_ids(root)
+
+
+def encode_task_mask(mask,ids):
+    result=np.full(np.asarray(mask).shape,255,np.uint8)
+    for local,canonical in enumerate(ids):result[np.asarray(mask)==canonical]=local
+    return result
+
+
+def decode_task_mask(mask,ids):
+    mask=np.asarray(mask)
+    if set(np.unique(mask))-(set(range(len(ids)))|{255}):raise ValueError('Invalid head prediction IDs')
+    result=np.full(mask.shape,255,np.uint8)
+    for local,canonical in enumerate(ids):result[mask==local]=canonical
+    return result
+
+
+def restrict_task_mask(mask,ids):
+    return decode_task_mask(encode_task_mask(mask,ids),ids)

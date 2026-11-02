@@ -7,8 +7,10 @@ from .schema import *
 from .dataset import import_images,rows,write_rows,split_dataset,refresh_reviews,validate_frozen
 from .labeling import import_mask
 
-def make_synthetic(root):
-    root=init(root);source=root/'synthetic_source';source.mkdir(exist_ok=True)
+def make_synthetic(root,class_ids=None):
+    root=init(root)
+    if class_ids is not None:configure_task(root,class_ids)
+    source=root/'synthetic_source';source.mkdir(exist_ok=True)
     rng=np.random.default_rng(42)
     for i in range(9):
         array=rng.integers(0,256,(64,64,3),dtype=np.uint8)
@@ -22,7 +24,7 @@ def make_synthetic(root):
         import_mask(root,r['image_id'],p,'SYNTHETIC_TEST_FIXTURE',True,label_source='synthetic_test_only')
     return root
 
-def smoke(root):
+def smoke(root,class_ids=None):
     import torch
     from .training import train,safe_loss
     from .evaluation import confusion,metrics
@@ -30,7 +32,7 @@ def smoke(root):
     root=Path(root)
     if 'synthetic' not in str(root).lower():raise ValueError('Use a separate path containing synthetic')
     if (root/'data/dataset_metadata.csv').exists():raise ValueError('Use a new synthetic root per run')
-    make_synthetic(root)
+    make_synthetic(root,class_ids)
     settings={'size':32,'epochs':2,'microbatch':1,'effective_batch':2,'seed':42}
     history1=train(root,'A',settings,tiny=True,stop_after_epoch=1)
     assert len(history1)==1
@@ -55,7 +57,7 @@ def smoke(root):
     resumed=checkpoint['model']
     maxdiff=max(float((resumed[k]-fullstate[k]).abs().max()) for k in resumed)
     if maxdiff>1e-5:raise AssertionError(f'Resume drift: {maxdiff}')
-    result={'status':'passed','synthetic_only':True,'real_training':False,'completed_epochs':2,
+    result={'status':'passed','synthetic_only':True,'real_training':False,'completed_epochs':2,'class_ids':active_class_ids(root),
             'resume_max_weight_difference':maxdiff,'evaluation_generated':True,'all_ignore_loss_finite':True,
             'disconnected_direction_abstains':True,'device':'cuda' if torch.cuda.is_available() else 'cpu'}
     save_json(root/'smoke_result.json',result);print(result,flush=True);return result

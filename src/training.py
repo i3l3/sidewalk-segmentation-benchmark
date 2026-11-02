@@ -31,12 +31,12 @@ def restore_rng(state):
     if torch.cuda.is_available() and state['cuda']:torch.cuda.set_rng_state_all(state['cuda'])
 
 class SegmentationDataset:
-    def __init__(self,root,records,size=512,augment=False):self.root=Path(root);self.records=records;self.size=size;self.augment=augment
+    def __init__(self,root,records,size=512,augment=False,class_ids=None):self.root=Path(root);self.records=records;self.size=size;self.augment=augment;self.class_ids=list(range(9)) if class_ids is None else list(class_ids)
     def __len__(self):return len(self.records)
     def __getitem__(self,index):
         import torch
         r=self.records[index];image=Image.open(self.root/r['image_path']).convert('RGB')
-        mask=Image.fromarray(read_mask(self.root/r['mask_path'],(image.height,image.width)))
+        mask=Image.fromarray(encode_task_mask(read_mask(self.root/r['mask_path'],(image.height,image.width)),self.class_ids))
         if self.augment:
             scale=random.uniform(.75,1.0);w=max(1,int(image.width*scale));h=max(1,int(image.height*scale))
             x=random.randint(0,image.width-w);y=random.randint(0,image.height-h)
@@ -57,12 +57,14 @@ def safe_loss(logits,labels):
     if not (labels!=255).any():return logits.sum()*0
     return F.cross_entropy(logits,labels,ignore_index=255)
 
-def load_student(variant,root,tiny=False):
+def load_student(variant,root,tiny=False,class_ids=None):
+    ids=active_class_ids(root) if class_ids is None else list(class_ids)
+    names=[CLASSES[i] for i in ids]
     from transformers import SegformerConfig,SegformerForSemanticSegmentation
     if tiny:
-        config=SegformerConfig(num_labels=9,depths=[1]*4,hidden_sizes=[8,16,32,64],
+        config=SegformerConfig(num_labels=len(ids),depths=[1]*4,hidden_sizes=[8,16,32,64],
             num_attention_heads=[1,2,4,8],decoder_hidden_size=16,sr_ratios=[8,4,2,1],
-            id2label=dict(enumerate(CLASSES)),label2id={v:k for k,v in enumerate(CLASSES)},semantic_loss_ignore_index=255)
+            id2label=dict(enumerate(names)),label2id={v:k for k,v in enumerate(names)},semantic_loss_ignore_index=255)
         return SegformerForSemanticSegmentation(config),{'tiny_synthetic_only':True}
     from huggingface_hub import HfApi
     mid='nvidia/mit-'+variant
@@ -70,8 +72,8 @@ def load_student(variant,root,tiny=False):
     revisions=load_json(revisions_path) if revisions_path.exists() else {}
     revision=revisions.get(mid) or HfApi().model_info(mid).sha
     revisions[mid]=revision;save_json(revisions_path,revisions)
-    model,loading=SegformerForSemanticSegmentation.from_pretrained(mid,revision=revision,num_labels=9,
-        id2label=dict(enumerate(CLASSES)),label2id={v:k for k,v in enumerate(CLASSES)},
+    model,loading=SegformerForSemanticSegmentation.from_pretrained(mid,revision=revision,num_labels=len(ids),
+        id2label=dict(enumerate(names)),label2id={v:k for k,v in enumerate(names)},
         semantic_loss_ignore_index=255,ignore_mismatched_sizes=True,output_loading_info=True,
         use_safetensors=False)
     if any(k.startswith('segformer.') for k in loading['missing_keys']):raise RuntimeError('Pretrained encoder weights missing')
@@ -96,7 +98,7 @@ def training_records(root,experiment):
     if not val or any(r['label_verified']!='true' for r in val):raise ValueError('All validation labels must be human reviewed')
     for r in train+val:
         a=read_mask(Path(root)/r['mask_path'],(int(r['image_height']),int(r['image_width'])))
-        if not (a!=255).any():raise ValueError('All-ignore sample cannot enter formal training')
+        if not (encode_task_mask(a,active_class_ids(root))!=255).any():raise ValueError('All-ignore sample for active task cannot enter formal training')
     return variant,train,val
 
 def train(root,experiment,overrides=None,resume=True,tiny=False,stop_after_epoch=None):
@@ -104,6 +106,8 @@ def train(root,experiment,overrides=None,resume=True,tiny=False,stop_after_epoch
     from torch.utils.data import DataLoader
     root=init(root);config={**DEFAULTS,**(overrides or {})};seed_all(config['seed'])
     variant,training,validation=training_records(root,experiment)
+    ids=active_class_ids(root)
+    config['class_ids']=ids
     if not tiny and not torch.cuda.is_available():raise RuntimeError('GPU is required for formal training')
     device='cuda' if torch.cuda.is_available() else 'cpu'
     if config['microbatch'] is None:
@@ -118,7 +122,7 @@ def train(root,experiment,overrides=None,resume=True,tiny=False,stop_after_epoch
     latest=folder/'latest.pt';manifest=folder/'run.json'
     if latest.exists() and not resume:raise ValueError('Checkpoint exists; use a new root/version or resume=True')
     if manifest.exists() and load_json(manifest)['signature']!=signature:raise ValueError('Resume configuration/data mismatch')
-    model,origin=load_student(variant,root,tiny);model.to(device)
+    model,origin=load_student(variant,root,tiny,ids);model.to(device)
     optimizer=torch.optim.AdamW(model.parameters(),lr=config['lr'],weight_decay=config['weight_decay'])
     steps_per_epoch=math.ceil(len(training)/effective);total=max(1,steps_per_epoch*config['epochs'])
     warmup=max(1,int(total*config['warmup_fraction']))
@@ -145,7 +149,7 @@ def train(root,experiment,overrides=None,resume=True,tiny=False,stop_after_epoch
         'tiny_synthetic_only':tiny,'device':device,'train_images':len(training),'validation_images':len(validation),
         'precision':'float16 AMP' if device=='cuda' else 'float32','created_at':previous_run.get('created_at',now()),
         'environments':previous_run.get('environments',[])+[environment]})
-    trainset=SegmentationDataset(root,training,config['size'],True);valset=SegmentationDataset(root,validation,config['size'])
+    trainset=SegmentationDataset(root,training,config['size'],True,ids);valset=SegmentationDataset(root,validation,config['size'],class_ids=ids)
     if stale>=config['patience']:return history
     for epoch in range(start_epoch,config['epochs']):
         begin=time.perf_counter();model.train();optimizer.zero_grad(set_to_none=True);losses=[]
@@ -168,8 +172,8 @@ def train(root,experiment,overrides=None,resume=True,tiny=False,stop_after_epoch
                 labels=batch['labels'].to(device);out=model(pixel_values=batch['pixel_values'].to(device)).logits
                 vl.append(float(safe_loss(out,labels)))
                 pred=torch.nn.functional.interpolate(out.float(),labels.shape[-2:],mode='bilinear',align_corners=False).argmax(1)
-                cm+=confusion(labels[0].cpu().numpy(),pred[0].cpu().numpy())
-        score=metrics(cm)['miou']
+                cm+=confusion(decode_task_mask(labels[0].cpu().numpy(),ids),decode_task_mask(pred[0].cpu().numpy(),ids))
+        score=metrics(cm,ids)['miou']
         if score is None:raise ValueError('No valid validation pixels')
         improved=score>best
         if improved:best=score;stale=0
@@ -193,12 +197,15 @@ def predict_student(root,experiment,split='test',evaluate=True):
     from .evaluation import evaluate_predictions
     root=Path(root);data=validate_frozen(root);run=load_json(root/'checkpoints'/experiment/'run.json')
     if run['tiny_synthetic_only'] and 'synthetic' not in str(root).lower():raise ValueError('Synthetic checkpoint not permitted for real-data evaluation')
+    ids=run['config'].get('class_ids',list(range(9)))
+    if ids!=active_class_ids(root):raise ValueError('Checkpoint task does not match active dataset task')
     device='cuda' if torch.cuda.is_available() else 'cpu'
     model=SegformerForSemanticSegmentation.from_pretrained(root/'checkpoints'/experiment/'best').to(device).eval()
     selected=[r for r in data if r['split']==split]
     if not selected or (evaluate and any(r['label_verified']!='true' for r in selected)):raise ValueError('Reviewed evaluation split required')
     folder=root/'outputs/masks'/experiment;folder.mkdir(parents=True,exist_ok=True);stats={}
-    ds=SegmentationDataset(root,selected,run['config']['size'])
+    if model.config.num_labels!=len(ids):raise ValueError('Checkpoint head/class mapping mismatch')
+    ds=SegmentationDataset(root,selected,run['config']['size'],class_ids=ids)
     with torch.no_grad():
         for i,r in enumerate(selected):
             x=ds[i]['pixel_values'][None].to(device)
@@ -207,7 +214,7 @@ def predict_student(root,experiment,split='test',evaluate=True):
             pred=torch.nn.functional.interpolate(out,(int(r['image_height']),int(r['image_width'])),mode='bilinear',align_corners=False).argmax(1)[0]
             if device=='cuda':torch.cuda.synchronize()
             stats[r['image_id']]={'seconds':time.perf_counter()-begin,'peak_gpu_mb':torch.cuda.max_memory_allocated()/2**20 if device=='cuda' else None}
-            Image.fromarray(pred.cpu().numpy().astype(np.uint8)).save(folder/f'{r["image_id"]}.png')
+            Image.fromarray(decode_task_mask(pred.cpu().numpy(),ids)).save(folder/f'{r["image_id"]}.png')
     save_json(folder/'run_info.json',stats)
-    if evaluate:return evaluate_predictions(root,experiment,folder,range(9),split,stats)
+    if evaluate:return evaluate_predictions(root,experiment,folder,ids,split,stats)
     return str(folder)

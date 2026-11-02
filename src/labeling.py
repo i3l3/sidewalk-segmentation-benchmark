@@ -102,9 +102,9 @@ def select_teacher(root):
             if r['split'] not in ['train','validation'] or r['label_verified']!='true':continue
             pred=root/'data/pseudo_labels'/key/f'{r["image_id"]}.png'
             if not pred.exists():continue
-            gt=read_mask(root/r['mask_path']);cm+=confusion(gt,read_mask(pred,gt.shape));n+=1
+            gt=restrict_task_mask(read_mask(root/r['mask_path']),active_class_ids(root));cm+=confusion(gt,read_mask(pred,gt.shape));n+=1
             if key==TEACHERS[0]:audit.append({'image_id':r['image_id'],'split':r['split'],'mask_sha':r['mask_sha']})
-        values=metrics(cm)['per_class']
+        values=metrics(cm,active_class_ids(root))['per_class']
         supported=[v['iou'] for v in values[1:] if v['iou'] is not None]
         if not n or not supported:raise ValueError('Reviewed train/validation masks and both teacher predictions required')
         scores[key]={'macro_iou':float(np.mean(supported)),'n_images':n}
