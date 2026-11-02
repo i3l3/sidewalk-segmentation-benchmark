@@ -130,3 +130,12 @@ AI Hub 공식 노면 폴리곤을 가져올 때는 배포본 설명서의 라벨
 `src/aihub_download.py`는 공식 `aihubshell`을 Linux/Colab에서 내려받아 구문 검사하고 출처·SHA256을 기록한다. 키는 프로세스 환경으로 전달하며 명령 인자·저장소에 넣지 않는다. 선택 용량의 3배 여유 공간을 검사하고 독립 폴더에 다운로드한다. 공식 도구의 종료 코드만 믿지 않고 HTTP 성공 표시·선택 아카이브 존재·ZIP 구조까지 확인한다. 실패한 다운로드는 완료로 기록하지 않는다. 로그에는 키를 가린다. 이미 있는 다운로드 폴더는 덮어쓰지 않는다. 재개 다운로드는 이 래퍼에서 보장하지 않는다.
 
 공식 도구가 전송 TAR를 풀고 분할 파일을 병합하더라도 내부 ZIP은 그대로 남는다. 데이터 다운로드는 검수나 학습 완료를 의미하지 않는다. 출처: [AI Hub 공식 aihubshell 안내](https://aihub.or.kr/devsport/apishell/list.do).
+
+
+## Colab Tailscale exit node
+
+노트북 상단 Git clone 셀 바로 뒤에 선택 연결 셀을 제공한다. `RUN_TAILSCALE=True`로 설치·로그인을 실행하고 출력 링크에서 기존 exit node와 같은 tailnet에 로그인한다. 다음 셀에서 승인된 온라인 exit node 목록을 확인한 뒤 `TAILSCALE_EXIT_NODE`에 국내 노드 이름이나 IP를 입력하고 다시 실행한다. 연결 성공 시 프록시의 공인 IP를 표시하고 `AIHUB_PROXY_URL`을 현재 커널 메모리에 설정한다. 이 IP가 국내 exit node의 공인 IP인지 확인한다.
+
+`src/tailscale_proxy.py`는 공식 static 패키지의 SHA256을 확인한 뒤 `/content/sidewalk-tailscale`에서 userspace HTTP 프록시를 실행한다. 인증 상태는 RAM에만 유지하며 Drive나 저장소에 기록하지 않는다. AI Hub 모듈이 실행하는 curl과 도구 설치 요청에만 프록시를 전달한다. 전역 `HTTPS_PROXY`, 시스템 라우팅, Git/Hugging Face/Drive 경로는 바꾸지 않는다. `DISCONNECT_TAILSCALE=True`로 해제할 수 있다. 국내 IP 경유는 AI Hub 인증이나 이용 승인을 대신하지 않는다. 실제 인증된 exit-node 다운로드는 사용자의 로그인·노드 선택 후 별도로 검증한다.
+
+원본 AI Hub ZIP 기본 저장 위치는 `/content/aihub_downloads`로 변경했다. 런타임 삭제 시 사라지므로 선별 데이터는 Drive에 별도 보관한다.

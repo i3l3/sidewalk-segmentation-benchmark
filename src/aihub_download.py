@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import re
+from urllib.parse import urlparse
 import shutil
 import subprocess
 import sys
@@ -15,13 +16,36 @@ GUIDE_URL = "https://aihub.or.kr/devsport/apishell/list.do"
 DATASET_KEY = "189"
 
 
+def proxy_environment():
+    """Only AI Hub child commands use the optional, local Tailscale proxy."""
+    env = dict(os.environ)
+    proxy = env.get('AIHUB_PROXY_URL', '')
+    if proxy:
+        parsed = urlparse(proxy)
+        if parsed.scheme != 'http' or parsed.hostname not in ('127.0.0.1', 'localhost') or not parsed.port or parsed.username or parsed.password:
+            raise ValueError('AIHUB_PROXY_URL must be a local HTTP proxy without credentials')
+        for name in ['http_proxy', 'https_proxy', 'HTTP_PROXY', 'HTTPS_PROXY']:
+            env[name] = proxy
+        for name in ['ALL_PROXY', 'all_proxy', 'NO_PROXY', 'no_proxy']:
+            env[name] = ''
+    return env
+
+
+def aihub_opener():
+    env = proxy_environment()
+    if env.get('AIHUB_PROXY_URL'):
+        return urllib.request.build_opener(urllib.request.ProxyHandler({
+            'http': env['AIHUB_PROXY_URL'], 'https': env['AIHUB_PROXY_URL']}))
+    return urllib.request.build_opener()
+
+
 def install_shell(cache):
     if sys.platform != "linux":
         raise RuntimeError("aihubshell requires Linux; run this cell in Google Colab.")
     cache = Path(cache); cache.mkdir(parents=True, exist_ok=True)
     tool = cache / "aihubshell"
     if not tool.exists():
-        with urllib.request.urlopen(SHELL_URL, timeout=60) as response:
+        with aihub_opener().open(SHELL_URL, timeout=60) as response:
             payload = response.read(1024 * 1024)
         if not payload.startswith(b"#!/bin/bash"):
             raise RuntimeError("Official shell response is not a bash script.")
@@ -58,7 +82,7 @@ def list_files(cache, dataset_key=DATASET_KEY):
     if not str(dataset_key).isdigit(): raise ValueError("Numeric dataset key required")
     tool = install_shell(cache)
     result = subprocess.run(["bash", str(tool), "-mode", "l", "-datasetkey", str(dataset_key)],
-                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
+                            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180, env=proxy_environment())
     rows = parse_catalog(result.stdout)
     if result.returncode or not rows:
         raise RuntimeError("AI Hub file listing failed or returned an unknown format. Retry later; check the official dataset key and API service.")
@@ -92,7 +116,7 @@ def download_files(cache, destination, file_keys, api_key, dataset_key=DATASET_K
     job = destination / ("files_" + "_".join(sorted(r["file_key"] for r in rows)))
     if job.exists(): raise FileExistsError("Download directory already exists. Inspect it and choose a new destination before retrying.")
     job.mkdir()
-    env = dict(os.environ); env["AIHUB_APIKEY"] = api_key.strip()
+    env = proxy_environment(); env["AIHUB_APIKEY"] = api_key.strip()
     command = ["bash", str(install_shell(cache)), "-mode", "d", "-datasetkey", str(dataset_key),
                "-filekey", ",".join(r["file_key"] for r in rows)]
     # Shell can return zero even on HTTP failures. Require its success marker AND complete archives.
