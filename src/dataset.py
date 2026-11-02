@@ -86,6 +86,28 @@ def refresh_reviews(root,data=None):
     if changed:write_rows(root,data)
     return data
 
+def allocate_group_splits(sizes,targets):
+    """Exact size-only assignment for small group sets; seeded order breaks ties."""
+    import itertools
+    sizes=np.asarray(sizes,dtype=int);targets=np.asarray(targets,dtype=float)
+    if len(sizes)<3 or len(targets)!=3 or (targets<=0).any() or (sizes<=0).any():
+        raise ValueError('Positive targets and at least three nonempty independent groups required')
+    desired=targets/targets.sum()*sizes.sum()
+    if len(sizes)<=10:
+        best=None
+        for assignment in itertools.product(range(3),repeat=len(sizes)):
+            if len(set(assignment))<3:continue
+            counts=np.bincount(assignment,weights=sizes,minlength=3)
+            score=(float(((counts-desired)**2).sum()),float(abs(counts[2]-desired[2])))
+            if best is None or score<best[0]:best=(score,assignment)
+        return list(best[1]),'exact_group_size_balance'
+    counts=np.zeros(3,int);assignment=[]
+    for size in sizes:
+        k=int(np.argmax((desired-counts)/np.maximum(desired,1)))
+        assignment.append(k);counts[k]+=size
+    return assignment,'greedy_group_size_balance'
+
+
 def split_dataset(root,seed=42,targets=(250,50,50),confirm_groups=False):
     root=Path(root);data=refresh_reviews(root)
     if not data:raise ValueError('No images imported')
@@ -118,13 +140,13 @@ def split_dataset(root,seed=42,targets=(250,50,50),confirm_groups=False):
     ratios=np.asarray(targets,dtype=float)/sum(targets);desired=ratios*len(data);counts=np.zeros(3,int)
     names=['train','validation','test']
     if len(values)<3:raise ValueError('At least three independent scene groups required')
-    for group in values:
-        k=int(np.argmax((desired-counts)/np.maximum(desired,1)))
+    assignment,algorithm=allocate_group_splits([len(group) for group in values],targets)
+    for group,k in zip(values,assignment):
         for r in group:r['split']=names[k]
         counts[k]+=len(group)
     if min(counts)==0:raise ValueError('Cannot create nonempty grouped splits')
     write_rows(root,data)
-    result={'seed':seed,'targets':dict(zip(names,targets)),'actual':dict(zip(names,map(int,counts))),
+    result={'seed':seed,'allocation_algorithm':algorithm,'independent_group_count':len(values),'targets':dict(zip(names,targets)),'actual':dict(zip(names,map(int,counts))),
             'images':{r['image_id']:{'image_sha':r['image_sha'],'group_id':r['group_id']} for r in data},
             'splits':{s:[r['image_id'] for r in data if r['split']==s] for s in names},'created_at':now()}
     save_json(lock,result);save_json(root/'metrics/similar_image_pairs.json',pairs)

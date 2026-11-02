@@ -59,6 +59,14 @@ class PipelineTests(unittest.TestCase):
             data=import_images(root,output)
             self.assertTrue(all('/MASK/' not in r['original_path'] for r in data))
 
+    def test_small_group_split_balances_without_breaking_groups(self):
+        assignment,algorithm=allocate_group_splits([111,73,67,60,20,19],[250,50,50])
+        counts=[sum(size for size,k in zip([111,73,67,60,20,19],assignment) if k==i) for i in range(3)]
+        self.assertEqual(algorithm,'exact_group_size_balance')
+        self.assertEqual(counts[0],251)
+        self.assertEqual(counts,[251,39,60])
+        self.assertEqual(len(assignment),6)
+
     def test_mapping_and_ignore(self):
         x=np.array([[0,1,2,3,4,5,6,7,8,9,10,11,65535]],np.uint16)
         self.assertEqual(legacy_to_train(x).tolist(),[[0,1,2,3,4,255,255,5,6,7,8,255,255]])
