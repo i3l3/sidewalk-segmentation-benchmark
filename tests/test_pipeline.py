@@ -22,6 +22,43 @@ class PipelineTests(unittest.TestCase):
         write_rows(root,data);split_dataset(root,targets=(5,2,2),confirm_groups=True)
         return root
 
+    def test_surface_masks_are_not_imported_as_photos(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder=Path(temp)/'Surface_001';(folder/'MASK').mkdir(parents=True)
+            Image.fromarray(np.full((16,16,3),100,np.uint8)).save(folder/'frame.jpg')
+            Image.fromarray(np.zeros((16,16),np.uint8)).save(folder/'MASK/frame.png')
+            root=init(Path(temp)/'project')
+            data=import_images(root,folder)
+            self.assertEqual(len(data),1)
+            self.assertEqual(data[0]['original_path'],'frame.jpg')
+
+    def test_surface_subset_preserves_pairs_xml_and_groups(self):
+        from scripts.prepare_surface_subset import prepare
+        with tempfile.TemporaryDirectory() as temp:
+            source=Path(temp)/'source.zip';output=Path(temp)/'subset.zip'
+            with zipfile.ZipFile(source,'w') as archive:
+                for group in range(3):
+                    folder=f'Surface_{group:03d}'
+                    archive.writestr(folder+'/labels.xml','<annotations><meta><labels><label><name>curb</name></label></labels></meta></annotations>')
+                    for frame in range(3):
+                        name=f'frame{frame}'
+                        image=io.BytesIO();Image.fromarray(np.full((8,8,3),frame+10,np.uint8)).save(image,format='JPEG')
+                        mask=io.BytesIO();Image.fromarray(np.zeros((8,8),np.uint8)).save(mask,format='PNG')
+                        archive.writestr(folder+'/'+name+'.jpg',image.getvalue())
+                        archive.writestr(folder+'/MASK/'+name+'.png',mask.getvalue())
+            report=prepare(source,output,count=5)
+            self.assertEqual(report['selected_pairs'],5)
+            self.assertEqual(len(report['folder_groups']),3)
+            self.assertFalse(report['folder_groups_confirmed'])
+            self.assertEqual(report['sample_xml']['label_names'],['curb'])
+            with zipfile.ZipFile(output) as archive:
+                self.assertEqual(sum(n.endswith('.jpg') for n in archive.namelist()),5)
+                self.assertEqual(sum(n.endswith('.png') for n in archive.namelist()),5)
+                self.assertEqual(sum(n.endswith('.xml') for n in archive.namelist()),3)
+            root=init(Path(temp)/'project')
+            data=import_images(root,output)
+            self.assertTrue(all('/MASK/' not in r['original_path'] for r in data))
+
     def test_mapping_and_ignore(self):
         x=np.array([[0,1,2,3,4,5,6,7,8,9,10,11,65535]],np.uint16)
         self.assertEqual(legacy_to_train(x).tolist(),[[0,1,2,3,4,255,255,5,6,7,8,255,255]])

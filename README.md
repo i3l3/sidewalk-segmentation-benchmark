@@ -144,3 +144,12 @@ AI Hub 공식 노면 폴리곤을 가져올 때는 배포본 설명서의 라벨
 ## 원본 데이터셋 저장 위치 선택
 
 다운로드 설정 셀의 `SAVE_DATASET_TO_DRIVE`로 원본 ZIP의 저장 위치를 선택한다. 기본값 `False`는 `/content/aihub_downloads`이며, `True`는 `/content/drive/MyDrive/Sidewalk-Segmentation-Benchmark/data/downloads/aihub_189`이다. Drive를 선택하면 필요한 경우 마운트한다. 이 변수는 학습 결과 저장 설정인 `USE_DRIVE`와 독립적이다. 설정 셀을 다시 실행한 뒤 다운로드를 시작한다. 진행 중인 다운로드나 기존 파일은 자동 이동하지 않는다.
+
+
+## 직접 받은 Surface ZIP을 작은 표본으로 업로드
+
+확인된 사용자 ZIP 목록은 `Surface_NNN/*.jpg` 9,558개, `Surface_NNN/MASK/*.png` 9,558개, 폴더별 XML 130개이다. PNG는 마스크 위치로 분리하며 실제 ID/색상 의미는 별도 확인한다. 이미지 가져오기는 `MASK`/`masks` 하위 경로를 제외한다. 공식 마스크를 사람이 검수한 라벨로 자동 승격하지 않는다.
+
+`python3 scripts/prepare_surface_subset.py --source Surface_1.zip --output sidewalk_subset_350.zip --count 350`으로 폴더에 분산된 JPG·대응 PNG 350쌍과 관련 XML을 묶는다. 원본 ZIP 전체를 풀지 않으며 원본 마스크·XML 값을 보존한다. 실제 선별 용량, PNG 헤더, XML 클래스 이름(지원 형식인 경우), 파일 해시는 `subset_manifest.json`에 기록한다. `Surface_NNN`은 그룹 후보일 뿐 실제 장소·시퀀스 확인을 대신하지 않는다.
+
+생성한 ZIP을 `내 드라이브/Sidewalk-Segmentation-Benchmark/data/uploads/sidewalk_subset_350.zip`에 올리고 `SOURCE_IMAGES='/content/drive/MyDrive/Sidewalk-Segmentation-Benchmark/data/uploads/sidewalk_subset_350.zip'`로 지정한다. 마스크와 XML은 가져오기 캐시에 보존되며 실제 클래스 정의·색상/ID 매핑을 검증한 뒤 라벨 변환을 연결한다. 변환 확인 전 정식 학습은 실행하지 않는다.

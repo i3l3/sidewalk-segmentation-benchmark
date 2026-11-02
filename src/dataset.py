@@ -41,7 +41,11 @@ def import_images(root,source,source_name='AI Hub sidewalk (dataset 189)',countr
     existing=rows(root);known={r['image_sha'] for r in existing}
     exclusions=load_json(root/'data/excluded_hashes.json') if (root/'data/excluded_hashes.json').exists() else []
     errors=[]
-    candidates=sorted(p for p in source.rglob('*') if p.is_file() and p.suffix.lower() in {'.jpg','.jpeg','.png','.webp','.bmp'})
+    # AI Hub Surface archives contain sibling MASK/*.png ground truth.
+    # Preserve masks in import_cache but never treat mask directories as input photos.
+    candidates=sorted(p for p in source.rglob('*') if p.is_file()
+                      and p.suffix.lower() in {'.jpg','.jpeg','.png','.webp','.bmp'}
+                      and not any(part.casefold() in {'mask','masks'} for part in p.relative_to(source).parts[:-1]))
     random.Random(42).shuffle(candidates)
     for p in candidates:
         if max_images and len(existing)>=max_images:break
