@@ -106,5 +106,43 @@
     "unit_tests": 38,
     "rule": "roadway normal + alley normal/speed_bump/damaged; crosswalk and caution excluded",
     "model_training": "not_run"
+  },
+  "fixed_three_class_split": {
+    "actual": {
+      "train": 251,
+      "validation": 39,
+      "test": 60
+    },
+    "independent_proxy_groups": 6,
+    "algorithm": "exact_group_size_balance",
+    "exact_duplicate_cross_split_pairs": 0,
+    "dhash_le4_cross_split_pairs": 0,
+    "proxy_group_overlap": 0,
+    "reviewed_total": 350,
+    "class_image_counts": {
+      "train": {
+        "1": 195,
+        "2": 248,
+        "8": 19
+      },
+      "validation": {
+        "1": 32,
+        "2": 39,
+        "8": 3
+      },
+      "test": {
+        "1": 36,
+        "2": 60,
+        "8": 7
+      }
+    },
+    "fixed_test_manifest_sha256": "f59af9de6e64a0a50fb6fd9dc25318081a572e7d1da8cb60afb96c902c9d3f9b",
+    "camera_view_counts": {
+      "unknown": 350
+    },
+    "location_independence_verified": false,
+    "test_predictions_evaluated": false,
+    "real_training_started": false,
+    "unit_tests": 39
   }
 }
