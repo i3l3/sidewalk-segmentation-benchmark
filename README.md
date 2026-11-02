@@ -1,3 +1,5 @@
+**수행평가 결과 확인:** [채점용 노트북](notebooks/submission.ipynb) · [제출 자료 안내](SUBMISSION.md). 실제 완료 범위는 3종 A(B0)·C(B2) 학습과 고정 테스트 60장 평가, B2 방향 후보 측정이다. 채점용 노트북은 저장된 결과를 읽는 용도이며 무거운 실행은 기본적으로 꺼져 있다.
+
 # 보행 지원 시스템 2차 개발
 
 `notebooks/benchmark.ipynb`의 최상위 구역은 요청한 네 부분입니다. `notebooks/finetuning.ipynb`는 같은 내용을 담은 이름 별칭입니다.

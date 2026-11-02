@@ -272,5 +272,17 @@
       "checkpoint_sha256": "2422e38a0a893d862bb5f3acfaac5800db19fe0c829569cff169a900dfbdd248"
     },
     "limitation": "44/60 Left candidates; no human direction ground truth; no tuning on test"
+  },
+  "submission_notebook": {
+    "checked_at": "2026-11-03 Asia/Seoul",
+    "cells": 27,
+    "top_level_sections": 4,
+    "valid_notebook_and_python": true,
+    "review_mode_all_code_cells_executed": true,
+    "review_mode_external_commands": 0,
+    "evidence_images_found": 3,
+    "all_run_flags_false": true,
+    "preserves_development_notebook": true,
+    "public_copy_embeds_dataset_samples": false
   }
 }
