@@ -9,7 +9,7 @@ CLASSES = ['Other','Road','Sidewalk','Curb','Crosswalk (plain)','Pedestrian Area
            'Curb Cut','Crosswalk Marking','Bike Lane']
 IGNORE = 255
 LEGACY_TO_TRAIN = {0:0,1:1,2:2,3:3,4:4,7:5,8:6,9:7,10:8}
-COLORS = np.array([[65,65,65],[100,110,150],[225,95,170],[255,155,45],
+COLORS = np.array([[65,65,65],[255,85,0],[225,95,170],[255,155,45],
                    [60,220,170],[150,90,225],[255,185,130],[235,245,245],[50,160,255]],dtype=np.uint8)
 
 def now(): return datetime.now(timezone.utc).isoformat()

@@ -166,7 +166,7 @@ def prepare_surface(root, archive_path, count=350, seed=42):
             colors[:] = [80, 80, 80]
             valid = train != 255
             colors[valid] = COLORS[train[valid]]
-            overlay = Image.blend(image, Image.fromarray(colors), .45)
+            overlay = Image.blend(image, Image.fromarray(colors), .72)
             overlay.thumbnail((960, 540))
             overlay.save(root / 'data/review/surface_overlays' / (image_id + '.jpg'), quality=88)
             small = np.asarray(image.convert('L').resize((9, 8), Image.Resampling.BILINEAR))
@@ -207,3 +207,54 @@ def prepare_surface(root, archive_path, count=350, seed=42):
             for row in data:
                 writer.writerow({k: row.get(k, '') for k in writer.fieldnames})
         return summary
+
+
+def refresh_review_overlays(root):
+    """Refresh visualization only; annotation IDs, reviews, split and checkpoints stay intact."""
+    root=Path(root);data=rows(root)
+    folder=root/'data/review/surface_overlays';folder.mkdir(parents=True,exist_ok=True)
+    road_examples=[];road_images=0;road_pixels=0;total_pixels=0
+    for index,row in enumerate(data):
+        with Image.open(root/row['image_path']) as source:image=source.convert('RGB')
+        mask=np.asarray(Image.open(root/row['mask_path']))
+        if mask.shape!=(image.height,image.width):raise ValueError('Image/mask size mismatch')
+        colors=np.full((*mask.shape,3),80,np.uint8);valid=mask!=255
+        colors[valid]=COLORS[mask[valid]]
+        overlay=Image.blend(image,Image.fromarray(colors),.72)
+        overlay.thumbnail((960,540))
+        # A persistent legend on every review image prevents confusing source RGB colors.
+        canvas=Image.new('RGB',(overlay.width,overlay.height+32),'white');canvas.paste(overlay,(0,32))
+        draw=ImageDraw.Draw(canvas)
+        for x,(cid,label) in enumerate([(1,'ROAD'),(2,'SIDEWALK'),(8,'BIKE LANE')]):
+            pos=x*max(150,overlay.width//4);color=tuple(int(c) for c in COLORS[cid])
+            draw.rectangle((pos+6,8,pos+22,24),fill=color);draw.text((pos+28,10),label,fill='black')
+        road_count=int((mask==1).sum());fraction=road_count/mask.size
+        draw.text((max(0,overlay.width-200),10),f'Road: {fraction:.1%}',fill='black')
+        canvas.save(folder/(row['image_id']+'.jpg'),quality=93)
+        road_pixels+=road_count;total_pixels+=mask.size
+        if road_count:
+            road_images+=1;road_examples.append((fraction,row))
+        if (index+1)%50==0:print('Overlays refreshed:',index+1,flush=True)
+    # Include images with visible road labels; never infer model accuracy from these annotations.
+    examples=[];groups=set()
+    for fraction,row in sorted(road_examples,key=lambda value:-value[0]):
+        if row['group_hint'] in groups:continue
+        examples.append((fraction,row));groups.add(row['group_hint'])
+        if len(examples)==6:break
+    preview=Image.new('RGB',(1152,max(1,len(examples))*270+30),'white');draw=ImageDraw.Draw(preview)
+    for x,title in enumerate(['Original image','Source RGB mask','Converted labels: orange = ROAD']):draw.text((x*384+6,8),title,fill='black')
+    for y,(fraction,row) in enumerate(examples):
+        paths=[root/row['image_path'],root/'data/source_rgb_masks'/(row['image_id']+'.png'),folder/(row['image_id']+'.jpg')]
+        for x,path in enumerate(paths):
+            with Image.open(path) as source:
+                thumb=source.convert('RGB');thumb.thumbnail((384,240));preview.paste(thumb,(x*384,30+y*270))
+        draw.text((8,30+y*270+242),f"{row['original_path']} | road label {fraction:.1%}",fill='black')
+    dest=root/'reports/surface_road_preview.jpg';dest.parent.mkdir(parents=True,exist_ok=True);preview.save(dest,quality=92)
+    # Main review preview uses the same new palette.
+    preview.save(root/'reports/surface_preparation_preview.jpg',quality=92)
+    result={'images':len(data),'road_label_images':road_images,'road_pixels':road_pixels,
+            'total_pixels':total_pixels,'road_color':COLORS[1].tolist(),'overlay_alpha':.72,
+            'preview_path':str(dest),'data_kind':'official XML labels, not model predictions',
+            'road_example_paths':[row['original_path'] for _,row in examples]}
+    save_json(root/'reports/surface_visualization.json',result)
+    return result
