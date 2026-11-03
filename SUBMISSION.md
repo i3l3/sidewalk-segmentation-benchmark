@@ -5,6 +5,7 @@
 3. **3분_발표안.md**는 실제 결과와 한계를 담은 발표 초안이다.
 4. **코드_전체.md**와 **source.zip**에 재사용 모듈·테스트·실험 노트북을 함께 제공한다. 공개 코드: https://github.com/i3l3/sidewalk-segmentation-benchmark
 5. `B0_B2_test_*.csv`, `B2_direction_*.csv`와 JSON은 계산 근거다. 학습 가중치·350장 데이터·분할 목록은 개인 Drive의 `Sidewalk-Segmentation-Benchmark/`에 보존한다.
+6. 채점용에도 전체 개발본의 모든 실행 셀과 모듈 소스를 포함했다. 각 구역의 ‘전체 기능 실행 셀’과 ‘전체 구현 코드’를 확인한다. `RUN_DEV_CELL_번호`를 True로 바꾸면 해당 원본 코드를 실행한다. 개인용 제출 사본에는 실제 작업 당시의 모든 셀 소스도 열람 전용으로 포함한다.
 
 ## 실행 구분
 

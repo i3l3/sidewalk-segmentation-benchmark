@@ -7,13 +7,135 @@ from pathlib import Path
 import argparse
 import base64
 import contextlib
+import hashlib
+import html
 import io
 import json
 import shutil
+import textwrap
 import uuid
 import nbformat as nbf
 
 REPO = Path(__file__).resolve().parents[1]
+
+
+def include_full_workflow(notebook, history=None):
+    """Keep every development cell and implementation visible within four sections.
+
+    Original executable cells retain their AST under one explicit opt-in guard.
+    Historical approvals and launchers are shown as read-only source, never replayed.
+    """
+    import re
+    groups = {i: [] for i in range(5)}
+    section = 0
+    for cell in notebook.cells:
+        if not isinstance(cell.source, str):
+            cell.source = ''.join(cell.source)
+        match = re.match(r'^# ([1-4])\.', cell.source)
+        if cell.cell_type == 'markdown' and match:
+            section = int(match[1])
+        groups[section].append(cell)
+    notebook.cells[0].source += '''
+
+**전체 기능 위치**
+
+| 구역 | 모두 포함한 기능 |
+|---|---|
+| 1 | Git 설치·GPU 확인·Drive·Tailscale exit node·기존 5개 모델 독립 프로세스 추론 |
+| 2 | AI Hub 선택 다운로드·Drive/임시 저장 선택·수동 ZIP 가져오기·XML 변환·3종/9종 매핑·중복/그룹 분할·두 Teacher·외부 검수·Teacher 선택 |
+| 3 | A~D 학습·설정·Best 저장·조기 종료·중단/재개·AMP·합성 smoke test |
+| 4 | 기존 5개/A~D 평가·지표와 시각화·방향 라벨·규칙/DT/RF·B2 새 사진 추론·시간 측정·보고서 |
+
+기능의 제공 여부와 실제 실행 완료 여부는 구분한다. 현재 실측 결과는 3종 A/C와 B2 방향 후보다.
+'''
+    development = nbf.read(REPO/'notebooks/finetuning.ipynb', as_version=4)
+    dev_groups = {i: [] for i in range(1, 5)}
+    section = 0
+    executable_count = 0
+    for index, cell in enumerate(development.cells):
+        match = re.match(r'^# ([1-4])\.', cell.source)
+        if cell.cell_type == 'markdown' and match:
+            section = int(match[1])
+            continue
+        if not section:
+            continue
+        if cell.cell_type == 'code':
+            flag = f'RUN_DEV_CELL_{index:03d}'
+            source = (f'# 전체 개발 노트북의 {index}번 셀: 아래 원본 코드를 선택 실행\n'
+                      f'{flag} = False\nif {flag}:\n'+textwrap.indent(cell.source, '    '))
+            copied = nbf.v4.new_code_cell(source, metadata={
+                'original_notebook':'notebooks/finetuning.ipynb',
+                'original_cell_index':index,
+                'original_source_sha256':hashlib.sha256(cell.source.encode()).hexdigest()})
+            executable_count += 1
+        else:
+            copied = nbf.v4.new_markdown_cell('> 전체 개발용 설명: 실제 수행 여부는 각 구역의 실측 결과를 기준으로 읽습니다.\n\n'+cell.source)
+        dev_groups[section].append(copied)
+    files = {1:list(sorted((REPO/'legacy').glob('*.py')))+[REPO/'legacy/model_registry.json'],
+             2:[REPO/'src'/name for name in ['schema.py','aihub_download.py','tailscale_proxy.py','surface_import.py','dataset.py','labeling.py']],
+             3:[REPO/'src/training.py',REPO/'src/smoke.py'],
+             4:[REPO/'src'/name for name in ['evaluation.py','direction.py','b2_direction.py','comparison_report.py','runner.py']]}
+    assigned = {p for paths in files.values() for p in paths}
+    files[4] += sorted(p for pattern in ['src/*.py','scripts/*.py','tests/*.py']
+                       for p in REPO.glob(pattern) if p not in assigned)
+    def source_cell(title, source, language='python', metadata=None):
+        fence = '`' * max(4, max((len(s) for s in re.findall(r'`+', source)), default=0)+1)
+        label = html.escape(title)
+        return nbf.v4.new_markdown_cell(
+            f'<details>\n<summary>{label} — 전체 코드 펼치기</summary>\n\n'
+            f'{fence}{language}\n{source}\n{fence}\n\n</details>', metadata=metadata or {})
+    history_groups = {i: [] for i in range(1, 5)}
+    if history is not None:
+        for index, cell in enumerate(history.cells):
+            # The actual working notebook appended dataset work after section 4.
+            section = (1 if index<=11 else 2 if index<=25 or 38<=index<=58
+                       else 3 if index<=30 or 59<=index<=65 else 4)
+            title = f'실제 작업 기록 {index:02d}: '+cell.source.splitlines()[0][:85]
+            history_groups[section].append(source_cell(title,cell.source,
+                'python' if cell.cell_type=='code' else 'markdown',
+                {'history_cell_index':index,'history_source_sha256':hashlib.sha256(cell.source.encode()).hexdigest()}))
+    result = list(groups[0])
+    for section in range(1,5):
+        result.extend(groups[section])
+        result.append(nbf.v4.new_markdown_cell(
+            '## 전체 기능 실행 셀 — 개발본과 동일한 원본 코드\n\n'
+            '아래에는 해당 구역의 개발용 셀을 빠짐없이 포함했습니다. '
+            '**각 셀의 `RUN_DEV_CELL_번호=False`는 열람 중 자동 실행을 막는 스위치입니다.** '
+            '실행할 때만 필요한 셀을 True로 바꾸고 위에서부터 실행합니다. '
+            '다운로드·학습 등 원본 내부의 선택 변수도 함께 설정해야 합니다. '
+            '1번 구역의 개발본 설치·Drive·경로 설정 셀이 이후 구역의 선행 조건입니다. '
+            '셀을 False로 둔 것은 기능 삭제나 학습 미완료를 뜻하지 않습니다.'))
+        result.extend(dev_groups[section])
+        result.append(nbf.v4.new_markdown_cell(
+            '## 해당 기능의 전체 구현 코드\n\n'
+            '실행 셀이 호출하는 모듈의 전체 소스입니다. 파일별로 펼쳐 볼 수 있습니다. '
+            '코드는 GitHub 파일과 같으며 이 표시용 코드 블록을 한 셀로 합쳐 실행하지 않습니다.'))
+        for path in files[section]:
+            source=path.read_text(encoding='utf8')
+            result.append(source_cell(path.relative_to(REPO).as_posix(),source,
+                'json' if path.suffix=='.json' else 'python',
+                {'source_file':path.relative_to(REPO).as_posix(),
+                 'source_sha256':hashlib.sha256(source.encode()).hexdigest()}))
+        if history_groups[section]:
+            result.append(nbf.v4.new_markdown_cell(
+                '## 실제 작업 당시의 셀 기록 — 열람 전용\n\n'
+                '아래는 실제 작업 노트북의 원본 소스 기록입니다. 중간 점검·검수 승인·'
+                '촬영일 그룹 분할·학습 실행과 상태 확인 등을 보존했습니다. '
+                '**검수 승인이나 과거 실행 명령을 자동으로 재실행하지 않습니다.** '
+                '과거 시점의 대기·미완료 문구는 현재 상태가 아니며 현재 실측 요약과 구분합니다. '
+                '원본 출력 전체는 별도 작업 노트북 백업에 보존합니다.'))
+            result.extend(history_groups[section])
+    notebook.cells=result
+    notebook.cells[0].source = notebook.cells[0].source.replace(
+        '코드 셀의 저장된 결과는 완료한 실험 기록이며 새 학습 결과가 아닙니다.',
+        '코드 셀의 저장된 결과는 완료한 실험 기록이며 새 학습 결과가 아닙니다. '
+        '**전체 개발 기능의 실행 셀과 호출 모듈 전체 소스도 각 구역에 포함했습니다.**')
+    notebook.metadata.submission.update({
+        'includes_full_development_workflow':True,
+        'development_executable_cells':executable_count,
+        'implementation_files':sum(len(paths) for paths in files.values()),
+        'read_only_history_cells':len(history.cells) if history is not None else 0})
+    return notebook
 
 
 def build(artifacts, destination):
@@ -111,6 +233,7 @@ Tesla T4, FP32, 배치 1, 512×512 입력, 워밍업 1장 후 전처리→B2→�
 3. **3분_발표안.md**는 실제 결과와 한계를 담은 발표 초안이다.
 4. **코드_전체.md**와 **source.zip**에 재사용 모듈·테스트·실험 노트북을 함께 제공한다. 공개 코드: {repository}
 5. `B0_B2_test_*.csv`, `B2_direction_*.csv`와 JSON은 계산 근거다. 학습 가중치·350장 데이터·분할 목록은 개인 Drive의 `Sidewalk-Segmentation-Benchmark/`에 보존한다.
+6. 채점용에도 전체 개발본의 모든 실행 셀과 모듈 소스를 포함했다. 각 구역의 ‘전체 기능 실행 셀’과 ‘전체 구현 코드’를 확인한다. `RUN_DEV_CELL_번호`를 True로 바꾸면 해당 원본 코드를 실행한다. 개인용 제출 사본에는 실제 작업 당시의 모든 셀 소스도 열람 전용으로 포함한다.
 
 ## 실행 구분
 
@@ -245,7 +368,7 @@ print('결과 열람 모드입니다. 학습·다운로드는 자동으로 실�
 | SegFormer B5 | 탐색 분할 |
 | SegFormer B2 | 탐색 분할 |
 
-기존 로더·시각화는 `legacy/`에 유지했다. 원본 구현의 의존성 충돌을 줄이기 위해 모델 실행은 독립 프로세스로 분리한다. 탐색 사진 4장과 예측 20개는 학습·검증·최종 테스트에 넣지 않았다. 다운로드·Tailscale 설정 같은 개발 과정은 재현용 노트북에 보존하고 채점용 본문에서는 생략했다.''')
+기존 로더·시각화는 `legacy/`에 유지했다. 원본 구현의 의존성 충돌을 줄이기 위해 모델 실행은 독립 프로세스로 분리한다. 탐색 사진 4장과 예측 20개는 학습·검증·최종 테스트에 넣지 않았다. 다운로드·Tailscale 설정을 포함한 개발용 실행 셀과 전체 구현은 아래 ‘전체 기능 실행 셀’과 ‘전체 구현 코드’에 모두 포함했다.''')
     code('''RUN_LEGACY_EXPLORATION = False
 if RUN_LEGACY_EXPLORATION:
     for model in ['mask2former_swin_l','oneformer_dinat_l','mask2former_r50','segformer_b5','segformer_b2']:
@@ -357,6 +480,10 @@ if RUN_B2_DIRECTION or RUN_B2_TIMING or DIRECTION_IMAGE_PATH:
         nb.cells[index].outputs=[output]
         if not private:public.cells[index].outputs=[output]
         shutil.copyfile(path,destination/name)
+    history_path=artifacts/'기존_실험노트북_백업.ipynb'
+    history=nbf.read(history_path,as_version=4) if history_path.exists() else None
+    nb=include_full_workflow(nb,history)
+    public=include_full_workflow(public)
     nbf.validate(nb);nbf.validate(public)
     nbf.write(nb,destination/'제출용_보행영역분할.ipynb')
     nbf.write(public,REPO/'notebooks/submission.ipynb')
@@ -365,7 +492,6 @@ if RUN_B2_DIRECTION or RUN_B2_TIMING or DIRECTION_IMAGE_PATH:
     full=['# 전체 코드 — 제출 시 열람용\n\n각 파일은 원래 모듈 구조로 실행한다. 이 문서 전체를 하나의 셀로 실행하지 않는다.\n']
     for pattern in ['src/*.py','legacy/*.py','scripts/*.py','tests/*.py']:
         for path in sorted(REPO.glob(pattern)):
-            if path.resolve()==Path(__file__).resolve():continue
             relative=path.relative_to(REPO)
             full.extend([f'\n## {relative.as_posix()}\n\n```python\n',path.read_text(encoding='utf8'),'\n```\n'])
     (destination/'코드_전체.md').write_text(''.join(full),encoding='utf8')
