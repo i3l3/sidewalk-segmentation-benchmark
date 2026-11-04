@@ -1,0 +1,48 @@
+[
+  {
+    "name": "kr_people.jpg",
+    "country": "korea",
+    "people": "yes",
+    "viewpoint": "pedestrian",
+    "source": "https://www.fnnews.com/news/201611021722571764",
+    "sha256": "12e7587677832f575ff2043bd7e6abbf4a429c3afd1e3d40eea072a39fdac0de",
+    "urls": [
+      "https://image.fnnews.com/resource/media/image/2016/11/02/201611021724551664_e.jpg"
+    ]
+  },
+  {
+    "name": "kr_empty.jpg",
+    "country": "korea",
+    "people": "no",
+    "viewpoint": "pedestrian",
+    "source": "https://www.twig24.com/news/localnews/local_seoul/seoul_gs/2017/07/25/20170725015008",
+    "sha256": "d77aec8c332a7523f7734626912c0b6d77f920d242ed5b2df27afce4bbe6c37e",
+    "urls": [
+      "https://img.seoul.co.kr/img/upload/2017/07/24/SSI_20170724174613.jpg"
+    ]
+  },
+  {
+    "name": "us_people.jpg",
+    "country": "usa",
+    "people": "worker",
+    "viewpoint": "pedestrian",
+    "source": "https://www.capitolhillseattle.com/2015/12/heres-why-theyre-adding-curb-ramps-to-sidewalks-all-over-capitol-hill/",
+    "sha256": "b264e96617ebf04d789ff27bd4f63f1c2d10b73fd3d42442290aac84a2674275",
+    "urls": [
+      "https://i0.wp.com/www.capitolhillseattle.com/wp-content/uploads/2015/12/Curb-Ramp-Inspection1.jpg",
+      "https://i0.wp.com/www.capitolhillseattle.com/wp-content/uploads/2015/12/Curb-Ramp-Inspection1.jpg?ssl=1",
+      "https://www.capitolhillseattle.com/wp-content/uploads/2015/12/Curb-Ramp-Inspection1.jpg"
+    ]
+  },
+  {
+    "name": "us_empty.jpg",
+    "country": "usa",
+    "people": "no",
+    "viewpoint": "pedestrian",
+    "source": "https://www.oregon.gov/odot/projects/pages/project-details.aspx?project=21255",
+    "sha256": "c0105c6934fd5954b289328b48039001f56890f4387bee15d9d9c3fbf5a6dec1",
+    "urls": [
+      "https://www.oregon.gov/odot/Projects/PublishingImages/K21255%20Example%20of%20completed%20ADA%20curb%20ramp.jpg"
+    ]
+  }
+]

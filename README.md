@@ -9,7 +9,7 @@
 3. **모델 학습 또는 파인튜닝 코드**: ImageNet 인코더에서 B0/B2 A~D 실험, best 저장, epoch 단위 재개.
 4. **성능 검증 코드**: 고정 테스트 평가, 오류·연석 확대, 그래프, 보행 영역, 방향 후보와 방향 분류기, 보고서.
 
-기존 모델 로더는 `legacy/`에서 재사용합니다. 1차 노트북과 사진 4장·20개 실험 결과는 이전 배포 자료에 보존되어 있으며, 이 공개 저장소에는 원본 사진·정답·가중치를 넣지 않았습니다.
+기존 모델 로더는 `legacy/`에서 재사용합니다. 원래 탐색 사진 4장은 `assets/exploration/`에, 출처와 해시는 `exploration_photos.json`에 포함했습니다. 학습용 이미지·정답·가중치는 포함하지 않습니다. 탐색 전에 `python -m src.exploration_inputs --root <ROOT>/exploration`을 실행하면 클론한 사진을 Drive 입력 폴더에 복사하고 해시를 검사합니다. 레포 사진이 없으면 원출처 다운로드를 시도하며, 실패하면 추론 전에 중단합니다.
 
 [Colab에서 열기](https://colab.research.google.com/github/i3l3/sidewalk-segmentation-benchmark/blob/main/notebooks/benchmark.ipynb)
 

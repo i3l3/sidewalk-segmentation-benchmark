@@ -18,4 +18,5 @@ logs/
 *.jpg
 *.jpeg
 *.webp
+!assets/exploration/*.jpg
 .DS_Store

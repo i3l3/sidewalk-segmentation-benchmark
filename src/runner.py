@@ -105,7 +105,7 @@ def main():
             sys.path.insert(0,str(Path(args.legacy).resolve()))
             import benchmark_core as legacy
             legacy.initialize(root);manifest=legacy.inspect_inputs(root)
-            if manifest.empty:print('No exploration images; phase 1 results are preserved separately.')
+            if manifest.empty:raise ValueError('No exploration images. Run the exploration image download cell first; no model inference was performed.')
             else:
                 verified=legacy.verify_models(root,load_json(Path(args.legacy)/'model_registry.json'),args.models)
                 legacy.run_benchmark(root,manifest,verified,args.models,require_gpu=True)
